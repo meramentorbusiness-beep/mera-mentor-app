@@ -21,6 +21,7 @@ import Upsell from "@/pages/Upsell";
 import AdminCourses from "@/pages/AdminCourses";
 import Leaderboard from "@/pages/Leaderboard";
 import ReferralLanding from "@/pages/ReferralLanding";
+import ReferralTree from "@/pages/ReferralTree";
 import Layout from "@/components/Layout";
 
 function AuthCallback() {
