@@ -610,17 +610,87 @@ async def get_wallet(user: dict = Depends(get_current_user)):
     wallet = await db.wallets.find_one({"user_id": user["user_id"]}, {"_id": 0})
     return wallet or {"user_id": user["user_id"], "balance": 0, "total_earned": 0, "total_withdrawn": 0}
 
+# TDS (Tax Deducted at Source) rate - 10% for commissions above threshold
+TDS_RATE = 0.10
+TDS_THRESHOLD = 5000  # No TDS below this amount
+
+def calculate_tds(amount: float) -> dict:
+    """Calculate TDS deduction for payout"""
+    if amount < TDS_THRESHOLD:
+        return {"gross": amount, "tds": 0, "net": amount, "tds_rate": 0}
+    tds = round(amount * TDS_RATE, 2)
+    return {"gross": amount, "tds": tds, "net": round(amount - tds, 2), "tds_rate": TDS_RATE * 100}
+
+@api_router.post("/wallet/payout/preview")
+async def preview_payout(request: Request, user: dict = Depends(get_current_user)):
+    """Preview payout with TDS calculation before confirming"""
+    body = await request.json()
+    amount = body.get("amount", 0)
+    wallet = await db.wallets.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not wallet or wallet.get("balance", 0) < amount:
+        raise HTTPException(status_code=400, detail="Insufficient balance")
+    if amount < MIN_WITHDRAWAL:
+        raise HTTPException(status_code=400, detail=f"Minimum withdrawal is ₹{MIN_WITHDRAWAL}")
+    calc = calculate_tds(amount)
+    # Estimated processing date (next business day + 2 days)
+    est_date = datetime.now(timezone.utc) + timedelta(days=3)
+    while est_date.weekday() >= 5:  # Skip weekends
+        est_date += timedelta(days=1)
+    return {
+        **calc,
+        "estimated_date": est_date.strftime("%d %b %Y"),
+        "processing_days": "2-3 business days",
+    }
+
 @api_router.post("/wallet/payout")
 async def request_payout(request: Request, user: dict = Depends(get_current_user)):
     body = await request.json()
     amount = body.get("amount", 0)
+    bank_details = body.get("bank_details", {})
     wallet = await db.wallets.find_one({"user_id": user["user_id"]}, {"_id": 0})
     if not wallet or wallet.get("balance", 0) < amount: raise HTTPException(status_code=400, detail="Insufficient balance")
     if amount < MIN_WITHDRAWAL: raise HTTPException(status_code=400, detail=f"Minimum withdrawal is ₹{MIN_WITHDRAWAL}")
+    calc = calculate_tds(amount)
     payout_id = f"pay_{uuid.uuid4().hex[:12]}"
-    await db.payouts.insert_one({"payout_id": payout_id, "user_id": user["user_id"], "amount": amount, "status": "pending", "created_at": now_iso(), "processed_at": None})
+    est_date = datetime.now(timezone.utc) + timedelta(days=3)
+    while est_date.weekday() >= 5:
+        est_date += timedelta(days=1)
+    await db.payouts.insert_one({
+        "payout_id": payout_id, "user_id": user["user_id"],
+        "gross_amount": calc["gross"], "tds_amount": calc["tds"], "net_amount": calc["net"],
+        "amount": calc["net"],  # backwards compatibility
+        "tds_rate": calc["tds_rate"],
+        "bank_details": bank_details,
+        "status": "pending", "created_at": now_iso(),
+        "estimated_date": est_date.isoformat(),
+        "processed_at": None,
+    })
     await db.wallets.update_one({"user_id": user["user_id"]}, {"$inc": {"balance": -amount, "total_withdrawn": amount}})
-    return {"payout_id": payout_id, "amount": amount, "status": "pending"}
+    await add_notification(user["user_id"], "Payout Requested", f"₹{calc['net']} payout requested. Expected by {est_date.strftime('%d %b %Y')}", "payout")
+    return {"payout_id": payout_id, "gross": calc["gross"], "tds": calc["tds"], "net": calc["net"], "status": "pending", "estimated_date": est_date.strftime("%d %b %Y")}
+
+@api_router.get("/wallet/payouts/{payout_id}/receipt")
+async def get_payout_receipt(payout_id: str, user: dict = Depends(get_current_user)):
+    """Generate receipt data for a payout (for PDF generation on frontend)"""
+    payout = await db.payouts.find_one({"payout_id": payout_id, "user_id": user["user_id"]}, {"_id": 0})
+    if not payout:
+        raise HTTPException(status_code=404, detail="Payout not found")
+    return {
+        "receipt_id": f"REC-{payout_id.upper()}",
+        "payout_id": payout_id,
+        "user_name": user["name"],
+        "user_email": user["email"],
+        "gross_amount": payout.get("gross_amount", payout.get("amount", 0)),
+        "tds_amount": payout.get("tds_amount", 0),
+        "tds_rate": payout.get("tds_rate", 0),
+        "net_amount": payout.get("net_amount", payout.get("amount", 0)),
+        "status": payout["status"],
+        "requested_date": payout.get("created_at", "")[:10],
+        "estimated_date": payout.get("estimated_date", "")[:10] if payout.get("estimated_date") else "",
+        "processed_date": payout.get("processed_at", "")[:10] if payout.get("processed_at") else "",
+        "platform": "Mera Mentor",
+        "pan_note": "TDS deducted as per Income Tax Act. Please keep this for your tax records.",
+    }
 
 @api_router.get("/wallet/transactions")
 async def get_transactions(user: dict = Depends(get_current_user)):
