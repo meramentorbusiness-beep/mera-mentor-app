@@ -563,8 +563,8 @@ class TestCommissionLevels:
         assert "levels" in data
         assert len(data["levels"]) == 5  # 5 levels (updated from 7)
         assert "min_withdrawal" in data
-        # Verify commission rates
-        expected_rates = [40, 20, 10, 5, 3, 1.5, 0.5]
+        # Verify commission rates - 5 levels: 40%, 12%, 6%, 3%, 1%
+        expected_rates = [40, 12, 6, 3, 1]
         actual_rates = [l["percentage"] for l in data["levels"]]
         assert actual_rates == expected_rates
         print(f"✅ Commission levels: {len(data['levels'])} levels, min withdrawal={data['min_withdrawal']}")
