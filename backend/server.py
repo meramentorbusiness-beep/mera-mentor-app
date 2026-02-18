@@ -871,6 +871,263 @@ async def admin_stats(admin: dict = Depends(require_admin)):
     com = await db.commissions.aggregate([{"$group": {"_id": None, "total": {"$sum": "$amount"}}}]).to_list(1)
     return {"total_users": total_users, "total_purchases": total_purchases, "total_revenue": rev[0]["total"] if rev else 0, "total_commissions": com[0]["total"] if com else 0}
 
+# ---- Media Upload System (Mock Storage - ready for R2/S3) ----
+ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/x-msvideo", "video/webm"]
+ALLOWED_PDF_TYPES = ["application/pdf"]
+ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+MAX_VIDEO_SIZE = 2 * 1024 * 1024 * 1024  # 2GB
+MAX_PDF_SIZE = 50 * 1024 * 1024  # 50MB
+MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
+
+def get_file_extension(content_type: str) -> str:
+    ext_map = {"video/mp4": ".mp4", "video/quicktime": ".mov", "video/x-msvideo": ".avi", "video/webm": ".webm",
+               "application/pdf": ".pdf", "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif"}
+    return ext_map.get(content_type, "")
+
+async def save_file_mock(file: UploadFile, file_key: str) -> str:
+    """Save file to local storage (mock mode)"""
+    file_path = UPLOAD_DIR / file_key
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(file_path, "wb") as buffer:
+        content = await file.read()
+        buffer.write(content)
+    return str(file_path)
+
+async def delete_file_mock(file_key: str) -> bool:
+    """Delete file from local storage (mock mode)"""
+    file_path = UPLOAD_DIR / file_key
+    if file_path.exists():
+        file_path.unlink()
+        return True
+    return False
+
+def generate_signed_url_mock(file_key: str, expires_in: int = 3600) -> str:
+    """Generate a signed URL for file access (mock - just returns API URL)"""
+    token = hashlib.sha256(f"{file_key}:{now_iso()}:{expires_in}".encode()).hexdigest()[:16]
+    return f"/api/media/serve/{file_key}?token={token}&expires={expires_in}"
+
+@api_router.post("/admin/media/upload")
+async def upload_media(
+    file: UploadFile = File(...),
+    upload_type: str = Form(...),  # "video", "pdf", "image"
+    course_id: Optional[str] = Form(None),
+    lesson_id: Optional[str] = Form(None),
+    admin: dict = Depends(require_admin)
+):
+    """Upload media file (video, PDF, or image)"""
+    # Validate file type
+    content_type = file.content_type or ""
+    if upload_type == "video":
+        if content_type not in ALLOWED_VIDEO_TYPES:
+            raise HTTPException(status_code=400, detail=f"Invalid video type. Allowed: MP4, MOV, AVI, WebM")
+        max_size = MAX_VIDEO_SIZE
+    elif upload_type == "pdf":
+        if content_type not in ALLOWED_PDF_TYPES:
+            raise HTTPException(status_code=400, detail="Only PDF files allowed")
+        max_size = MAX_PDF_SIZE
+    elif upload_type == "image":
+        if content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(status_code=400, detail="Invalid image type. Allowed: JPEG, PNG, WebP, GIF")
+        max_size = MAX_IMAGE_SIZE
+    else:
+        raise HTTPException(status_code=400, detail="Invalid upload_type. Use: video, pdf, image")
+    
+    # Generate unique file key
+    ext = get_file_extension(content_type)
+    file_key = f"{upload_type}s/{uuid.uuid4().hex}{ext}"
+    
+    # Save file (mock mode - local storage)
+    file_path = await save_file_mock(file, file_key)
+    
+    # Get file size
+    file_size = os.path.getsize(file_path)
+    if file_size > max_size:
+        await delete_file_mock(file_key)
+        raise HTTPException(status_code=400, detail=f"File too large. Max: {max_size // (1024*1024)}MB")
+    
+    # Store metadata in DB
+    media_id = f"media_{uuid.uuid4().hex[:12]}"
+    media_record = {
+        "media_id": media_id,
+        "file_key": file_key,
+        "file_name": file.filename,
+        "file_type": upload_type,
+        "content_type": content_type,
+        "file_size": file_size,
+        "course_id": course_id,
+        "lesson_id": lesson_id,
+        "uploaded_by": admin["user_id"],
+        "storage_mode": STORAGE_MODE,
+        "status": "ready",  # For videos, could be "processing" if we add transcoding
+        "is_free_preview": False,
+        "download_count": 0,
+        "created_at": now_iso(),
+    }
+    await db.media.insert_one(media_record)
+    
+    # Log upload
+    await db.media_access_log.insert_one({
+        "user_id": admin["user_id"], "media_id": media_id, "action": "upload",
+        "file_key": file_key, "created_at": now_iso()
+    })
+    
+    return {
+        "media_id": media_id,
+        "file_key": file_key,
+        "file_name": file.filename,
+        "file_type": upload_type,
+        "file_size": file_size,
+        "url": f"{MEDIA_BASE_URL}/{file_key}",
+        "status": "ready"
+    }
+
+@api_router.get("/admin/media")
+async def list_media(
+    upload_type: Optional[str] = None,
+    course_id: Optional[str] = None,
+    admin: dict = Depends(require_admin)
+):
+    """List all uploaded media files"""
+    query = {}
+    if upload_type: query["file_type"] = upload_type
+    if course_id: query["course_id"] = course_id
+    media = await db.media.find(query, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return media
+
+@api_router.delete("/admin/media/{media_id}")
+async def delete_media(media_id: str, admin: dict = Depends(require_admin)):
+    """Delete a media file"""
+    media = await db.media.find_one({"media_id": media_id}, {"_id": 0})
+    if not media:
+        raise HTTPException(status_code=404, detail="Media not found")
+    
+    # Delete from storage
+    await delete_file_mock(media["file_key"])
+    
+    # Delete from DB
+    await db.media.delete_one({"media_id": media_id})
+    
+    return {"message": "Media deleted", "media_id": media_id}
+
+@api_router.patch("/admin/media/{media_id}")
+async def update_media(media_id: str, request: Request, admin: dict = Depends(require_admin)):
+    """Update media metadata (course_id, lesson_id, is_free_preview)"""
+    body = await request.json()
+    media = await db.media.find_one({"media_id": media_id}, {"_id": 0})
+    if not media:
+        raise HTTPException(status_code=404, detail="Media not found")
+    
+    updates = {}
+    for field in ["course_id", "lesson_id", "is_free_preview", "file_name"]:
+        if field in body:
+            updates[field] = body[field]
+    
+    if updates:
+        await db.media.update_one({"media_id": media_id}, {"$set": updates})
+    
+    return await db.media.find_one({"media_id": media_id}, {"_id": 0})
+
+# ---- Secure Media Serving ----
+@api_router.get("/media/video/{lesson_id}")
+async def serve_lesson_video(lesson_id: str, user: dict = Depends(get_current_user)):
+    """Serve video for a lesson (requires purchase or admin)"""
+    # Find course containing this lesson
+    course = await db.courses.find_one({"lessons.lesson_id": lesson_id}, {"_id": 0})
+    if not course:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    
+    # Check access
+    if not user.get("is_admin"):
+        purchase = await db.purchases.find_one({"user_id": user["user_id"], "course_id": course["course_id"]})
+        lesson = next((l for l in course.get("lessons", []) if l.get("lesson_id") == lesson_id), None)
+        if not purchase and not (lesson and lesson.get("is_free_preview")):
+            raise HTTPException(status_code=403, detail="Purchase required")
+    
+    # Get media for this lesson
+    media = await db.media.find_one({"lesson_id": lesson_id, "file_type": "video"}, {"_id": 0})
+    if not media:
+        # Fallback to YouTube URL in lesson
+        lesson = next((l for l in course.get("lessons", []) if l.get("lesson_id") == lesson_id), None)
+        if lesson and lesson.get("video_url"):
+            return {"type": "youtube", "url": lesson["video_url"]}
+        raise HTTPException(status_code=404, detail="Video not found")
+    
+    # Generate signed URL
+    signed_url = generate_signed_url_mock(media["file_key"])
+    
+    # Log access
+    await db.media_access_log.insert_one({
+        "user_id": user["user_id"], "media_id": media["media_id"],
+        "lesson_id": lesson_id, "action": "view", "created_at": now_iso()
+    })
+    
+    return {"type": "uploaded", "url": signed_url, "media_id": media["media_id"]}
+
+@api_router.get("/media/pdf/{resource_id}")
+async def serve_pdf(resource_id: str, user: dict = Depends(get_current_user)):
+    """Serve PDF resource (requires purchase or is_free_preview)"""
+    media = await db.media.find_one({"media_id": resource_id}, {"_id": 0})
+    if not media:
+        raise HTTPException(status_code=404, detail="Resource not found")
+    
+    # Check access
+    if not user.get("is_admin") and not media.get("is_free_preview"):
+        if media.get("course_id"):
+            purchase = await db.purchases.find_one({"user_id": user["user_id"], "course_id": media["course_id"]})
+            if not purchase:
+                raise HTTPException(status_code=403, detail="Purchase required")
+    
+    # Generate signed URL
+    signed_url = generate_signed_url_mock(media["file_key"])
+    
+    # Update download count
+    await db.media.update_one({"media_id": resource_id}, {"$inc": {"download_count": 1}})
+    
+    # Log access
+    await db.media_access_log.insert_one({
+        "user_id": user["user_id"], "media_id": resource_id,
+        "action": "download", "created_at": now_iso()
+    })
+    
+    return {"url": signed_url, "file_name": media.get("file_name", "document.pdf")}
+
+@api_router.get("/media/serve/{file_key:path}")
+async def serve_file(file_key: str, token: str = "", expires: int = 3600, request: Request = None):
+    """Serve the actual file (mock storage - direct file serve)"""
+    file_path = UPLOAD_DIR / file_key
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # In production, validate token here
+    # For mock mode, we serve directly
+    
+    content_type, _ = mimetypes.guess_type(str(file_path))
+    return FileResponse(
+        file_path,
+        media_type=content_type or "application/octet-stream",
+        filename=file_path.name
+    )
+
+@api_router.get("/media/files/{file_key:path}")
+async def get_media_file(file_key: str):
+    """Public endpoint for media files (used in URLs)"""
+    file_path = UPLOAD_DIR / file_key
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    content_type, _ = mimetypes.guess_type(str(file_path))
+    return FileResponse(file_path, media_type=content_type or "application/octet-stream")
+
+# ---- Admin Commission Settings ----
+@api_router.get("/admin/commission-settings")
+async def get_commission_settings(admin: dict = Depends(require_admin)):
+    """Get current commission settings"""
+    return {
+        "levels": [{"level": k, "percentage": v * 100} for k, v in COMMISSION_LEVELS.items()],
+        "total_payout_percent": sum(v * 100 for v in COMMISSION_LEVELS.values()),
+        "platform_keep_percent": 100 - sum(v * 100 for v in COMMISSION_LEVELS.values()),
+        "min_withdrawal": MIN_WITHDRAWAL,
+    }
+
 # ---- Seed Data ----
 @app.on_event("startup")
 async def seed_data():
