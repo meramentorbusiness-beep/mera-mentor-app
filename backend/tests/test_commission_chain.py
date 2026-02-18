@@ -1,15 +1,15 @@
 """
-7-Level Commission Chain Test - Mera Mentor
+5-Level Commission Chain Test - Mera Mentor
 Tests the CRITICAL multi-level referral commission distribution:
-Creates 8-user chain: A→B→C→D→E→F→G→H
-When H purchases a ₹1000 course, commissions should be:
-- G (Level 1): ₹400 (40%)
-- F (Level 2): ₹200 (20%)
-- E (Level 3): ₹100 (10%)
-- D (Level 4): ₹50 (5%)
-- C (Level 5): ₹30 (3%)
-- B (Level 6): ₹15 (1.5%)
-- A (Level 7): ₹5 (0.5%)
+Creates 6-user chain: A→B→C→D→E→F
+When F purchases a ₹1000 course, commissions should be:
+- E (Level 1): ₹400 (40%)
+- D (Level 2): ₹120 (12%)
+- C (Level 3): ₹60 (6%)
+- B (Level 4): ₹30 (3%)
+- A (Level 5): ₹10 (1%)
+
+Total: 62% to affiliates, 38% to platform
 
 Also tests:
 - Short chain (3 levels) - only 2 people get commission
@@ -34,8 +34,8 @@ def create_test_user_with_session(email_prefix: str, referral_code: str = None):
     pass
 
 
-class TestSevenLevelCommissionChain:
-    """Critical test: 7-level commission distribution"""
+class TestFiveLevelCommissionChain:
+    """Critical test: 5-level commission distribution"""
     
     def test_commission_levels_configuration(self):
         """Verify commission levels are correctly configured"""
@@ -44,9 +44,9 @@ class TestSevenLevelCommissionChain:
         data = response.json()
         
         levels = data["levels"]
-        assert len(levels) == 7
+        assert len(levels) == 5
         
-        # Expected rates: 40%, 20%, 10%, 5%, 3%, 1.5%, 0.5%
+        # Expected rates: 40%, 12%, 6%, 3%, 1%
         expected = [
             {"level": 1, "percentage": 40, "example_earning": 200.0},   # 40% of 500
             {"level": 2, "percentage": 20, "example_earning": 100.0},   # 20% of 500
