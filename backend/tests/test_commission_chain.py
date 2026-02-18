@@ -95,7 +95,7 @@ class TestFiveLevelCommissionChain:
             assert actual_commission == expected_commissions[level]
         
         total_commissions = sum(expected_commissions.values())
-        assert total_commissions == 800  # 80% of 1000
+        assert total_commissions == 620  # 62% of 1000
         print(f"✅ For ₹1000 course:")
         for level, amount in expected_commissions.items():
             print(f"   Level {level}: ₹{amount}")
@@ -123,7 +123,7 @@ class TestShortChainCommission:
     """Test commission with short referral chains"""
     
     def test_referral_chain_length(self):
-        """Test that referral chain is limited to 7 levels"""
+        """Test that referral chain is limited to 5 levels"""
         session = requests.Session()
         session.headers.update({
             "Content-Type": "application/json",
