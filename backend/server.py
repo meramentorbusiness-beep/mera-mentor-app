@@ -27,9 +27,20 @@ if RAZORPAY_ENABLED:
     import razorpay
     razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
-COMMISSION_LEVELS = {1: 0.40, 2: 0.20, 3: 0.10, 4: 0.05, 5: 0.03, 6: 0.015, 7: 0.005}
+# Commission levels - 5 levels (Option B: 40%, 12%, 6%, 3%, 1% = 62% total, platform keeps 38%)
+COMMISSION_LEVELS = {1: 0.40, 2: 0.12, 3: 0.06, 4: 0.03, 5: 0.01}
 MIN_WITHDRAWAL = 100
 ADMIN_EMAILS = os.environ.get("ADMIN_EMAILS", "").split(",")
+
+# Media Storage Configuration (Mock mode - switch to R2/S3 when keys provided)
+STORAGE_MODE = os.environ.get("STORAGE_MODE", "mock")  # "mock", "r2", "s3"
+R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID", "")
+R2_ACCESS_KEY = os.environ.get("R2_ACCESS_KEY_ID", "")
+R2_SECRET_KEY = os.environ.get("R2_SECRET_ACCESS_KEY", "")
+R2_BUCKET = os.environ.get("R2_BUCKET_NAME", "mera-mentor-media")
+MEDIA_BASE_URL = os.environ.get("MEDIA_BASE_URL", "/api/media/files")
+UPLOAD_DIR = ROOT_DIR / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 # XP rewards
 XP_LESSON_COMPLETE = 10
