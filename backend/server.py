@@ -1155,6 +1155,10 @@ async def seed_data():
     await db.progress.create_index([("user_id", 1), ("course_id", 1), ("lesson_id", 1)], unique=True)
     await db.notifications.create_index("user_id")
     await db.certificates.create_index("certificate_id", unique=True)
+    await db.media.create_index("media_id", unique=True)
+    await db.media.create_index("course_id")
+    await db.media.create_index("lesson_id")
+    await db.media_access_log.create_index("user_id")
 
 app.include_router(api_router)
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','), allow_methods=["*"], allow_headers=["*"])
