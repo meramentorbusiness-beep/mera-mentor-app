@@ -1,0 +1,147 @@
+{
+  "project_name": "CourseReferral_Dashboard_E1",
+  "design_philosophy": {
+    "identity": "The Anti-AI Designer",
+    "core_principles": [
+      "Fusion over Imitation: Mix Luxury Fintech (Gold/Purple) with EdTech (Clean/White).",
+      "Emotion First: The dashboard should feel 'Lucrative' and 'Progressive'.",
+      "Content is King: Data (Earnings) is the hero. Make numbers big and beautiful.",
+      "Negative Space: Use whitespace to separate 'Earning' areas from 'Learning' areas."
+    ],
+    "anti_patterns": [
+      "No default Shadcn cards (must have custom shadows).",
+      "No generic 'Inter' font for headings.",
+      "No flat gradients (use noise/texture).",
+      "No clutter (hide low-priority actions in dropdowns)."
+    ]
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Plus Jakarta Sans, sans-serif",
+      "body": "Inter, sans-serif",
+      "numbers": "Manrope, monospace"
+    },
+    "scale": {
+      "h1": "text-4xl md:text-5xl font-bold tracking-tight",
+      "h2": "text-3xl font-semibold tracking-tight",
+      "h3": "text-2xl font-semibold",
+      "stat_value": "text-4xl font-extrabold tracking-tighter text-foreground",
+      "stat_label": "text-sm font-medium text-muted-foreground uppercase tracking-widest",
+      "body_large": "text-lg leading-relaxed",
+      "body_base": "text-base leading-normal",
+      "caption": "text-sm text-muted-foreground"
+    },
+    "usage_rules": [
+      "Use 'Manrope' specifically for all currency and commission percentage values.",
+      "Use 'Plus Jakarta Sans' for Page Titles and Section Headers.",
+      "Use 'Inter' for long-form text and instructions."
+    ]
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "DEFAULT": "#4F46E5",
+        "foreground": "#FFFFFF",
+        "dark": "#3730A3",
+        "light": "#818CF8"
+      },
+      "secondary": {
+        "DEFAULT": "#F59E0B",
+        "foreground": "#FFFFFF",
+        "dark": "#B45309",
+        "light": "#FCD34D"
+      },
+      "background": "#F8FAFC",
+      "surface": "#FFFFFF",
+      "header_bg": "#0F172A",
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444"
+    },
+    "gradients": {
+      "header": "bg-gradient-to-r from-[#0F172A] via-[#1E293B] to-[#334155]",
+      "gold_text": "bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-yellow-600",
+      "card_hover": "hover:bg-gradient-to-br hover:from-white hover:to-slate-50"
+    },
+    "contrast_rules": [
+      "Header text must be Pure White (#FFFFFF) or Light Grey (#CBD5E1) against the dark header.",
+      "Card text must be Slate-900 (#0F172A) for readability.",
+      "Commission values should use the 'Secondary' (Gold/Amber) color to signify wealth."
+    ]
+  },
+  "layout_structure": {
+    "scaffold": {
+      "type": "Hybrid Header-Sidebar",
+      "mobile": "Hamburger menu with slide-out sheet.",
+      "desktop": "Top-heavy 'Banner' style with overlapping cards."
+    },
+    "header_banner": {
+      "height": "h-[280px]",
+      "background": "bg-slate-900 relative overflow-hidden",
+      "content_alignment": "flex flex-col justify-center items-center text-center pt-10 pb-20",
+      "decorations": "Use abstract geometric overlays (opacity-20) in the background."
+    },
+    "main_content": {
+      "container": "container mx-auto px-4 sm:px-6 lg:px-8",
+      "offset": "-mt-20 relative z-10",
+      "grid_strategy": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+    },
+    "spacing": {
+      "section_gap": "gap-8",
+      "card_padding": "p-6 md:p-8"
+    }
+  },
+  "components": {
+    "cards": {
+      "base": "bg-white rounded-xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300",
+      "stat_card": "flex flex-col justify-between h-full p-6",
+      "referral_card": "flex items-center justify-between p-4 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors"
+    },
+    "buttons": {
+      "primary": "bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-full shadow-lg shadow-indigo-500/20 transition-all active:scale-95",
+      "secondary": "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium py-2 px-6 rounded-full transition-all",
+      "accent": "bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-6 rounded-full shadow-lg shadow-amber-500/20"
+    },
+    "inputs": {
+      "style": "bg-slate-50 border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-lg h-12 px-4 text-base transition-all"
+    },
+    "tabs": {
+      "list": "bg-slate-100/50 p-1 rounded-full inline-flex",
+      "trigger": "rounded-full px-6 py-2 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm transition-all"
+    }
+  },
+  "images": {
+    "assets": {
+      "header_bg": "https://images.unsplash.com/photo-1771011726574-60ab6028724a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MTJ8MHwxfHNlYXJjaHwzfHxkYXJrJTIwYmx1ZSUyMGFic3RyYWN0JTIwZ2VvbWV0cmljJTIwdGVjaG5vbG9neSUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzcxNDMxODgxfDA&ixlib=rb-4.1.0&q=85",
+      "course_placeholder": "https://images.unsplash.com/photo-1562813733-b31f71025d54?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHwzfHxjb2RpbmclMjBvbiUyMGxhcHRvcCUyMHNjcmVlbiUyMGRhcmt8ZW58MHx8fHwxNzcxNDMxODY4fDA&ixlib=rb-4.1.0&q=85",
+      "community_referral": "https://images.unsplash.com/photo-1758518732055-582461d8e345?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBvZmZpY2UlMjB0ZWFtJTIwY29sbGFib3JhdGlvbiUyMGhhcHB5fGVufDB8fHx8MTc3MTQzMTg2OXww&ixlib=rb-4.1.0&q=85",
+      "upsell_bundle": "https://images.unsplash.com/photo-1758637612717-e0cd7dc3cdea?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MTJ8MHwxfHNlYXJjaHwyfHxkYXJrJTIwYmx1ZSUyMGFic3RyYWN0JTIwZ2VvbWV0cmljJTIwdGVjaG5vbG9neSUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzcxNDMxODgxfDA&ixlib=rb-4.1.0&q=85"
+    },
+    "usage": {
+      "header": "Use 'header_bg' with an absolute positioned div, z-0, opacity-30, mix-blend-overlay.",
+      "avatars": "Use UI Avatars (api.dicebear.com) or initials for user profiles if no image is uploaded."
+    }
+  },
+  "motion": {
+    "presets": {
+      "card_entrance": "initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}",
+      "number_count": "Use 'react-countup' or similar for earnings numbers.",
+      "hover_lift": "whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 300 }}"
+    }
+  },
+  "accessibility": {
+    "checklist": [
+      "Ensure text contrast on the dark header is > 4.5:1 (use pure white or very light grey).",
+      "All buttons must have distinct focus rings.",
+      "Use 'aria-label' on all icon-only buttons (copy link, share)."
+    ]
+  },
+  "universal_guidelines": [
+    "Do not use gradients for main text unless it is a very large headline.",
+    "Avoid centering text in cards; left-align creates better scanability for lists.",
+    "Use 'sonner' for all toast notifications (copy success, payout requested).",
+    "All currency inputs must prevent negative numbers.",
+    "Mobile Responsiveness: The header banner should shrink to h-[200px] on mobile, and cards should stack vertically."
+  ],
+  "instructions_to_main_agent": "Start by setting up the Router and the Main Layout (Header + Outlet). Then build the 'Dashboard' page first as it contains the core 'SuperProfile' aesthetic (Dark Banner + Offset Cards). Use the provided image URLs for the 'Course Marketplace' thumbnails."
+}
