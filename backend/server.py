@@ -549,6 +549,62 @@ async def get_referral_counts(user: dict = Depends(get_current_user)):
     churned = await db.users.count_documents({"referred_by": user["user_id"], "status": "churned"})
     return {"pending": pending, "active": active, "churned": churned, "total": pending + active + churned}
 
+# ---- Referral Tree (Batch 3) ----
+async def build_referral_tree_node(user_id: str, depth: int = 0, max_depth: int = 7):
+    """Recursively build referral tree for visualization"""
+    if depth >= max_depth:
+        return None
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "user_id": 1, "name": 1, "picture": 1, "email": 1, "status": 1, "created_at": 1})
+    if not user:
+        return None
+    # Get direct referrals
+    direct_refs = await db.users.find({"referred_by": user_id}, {"_id": 0, "user_id": 1}).to_list(100)
+    # Get total earnings from this user's subtree
+    pipeline = [{"$match": {"from_user_id": user_id}}, {"$group": {"_id": None, "total": {"$sum": "$amount"}}}]
+    earnings = await db.commissions.aggregate(pipeline).to_list(1)
+    total_earned = earnings[0]["total"] if earnings else 0
+    children = []
+    for ref in direct_refs:
+        child = await build_referral_tree_node(ref["user_id"], depth + 1, max_depth)
+        if child:
+            children.append(child)
+    return {
+        "name": user.get("name", "Unknown"),
+        "attributes": {
+            "level": depth,
+            "status": user.get("status", "pending"),
+            "earned": total_earned,
+            "joined": user.get("created_at", "")[:10] if user.get("created_at") else "",
+        },
+        "user_id": user_id,
+        "picture": user.get("picture", ""),
+        "email": user.get("email", ""),
+        "children": children if children else None,
+    }
+
+@api_router.get("/referrals/tree")
+async def get_referral_tree(user: dict = Depends(get_current_user)):
+    tree = await build_referral_tree_node(user["user_id"], 0, 7)
+    if not tree:
+        return {"name": user["name"], "attributes": {"level": 0, "status": "active"}, "children": None}
+    return tree
+
+@api_router.get("/referrals/tree-stats")
+async def get_referral_tree_stats(user: dict = Depends(get_current_user)):
+    """Get summary stats for referral tree"""
+    counts_by_level = []
+    for level in range(1, 8):
+        # Find users at this level in the chain
+        count = await db.users.count_documents({f"referral_chain.{level-1}": user["user_id"]})
+        if level == 1:
+            count = await db.users.count_documents({"referred_by": user["user_id"]})
+        counts_by_level.append({"level": level, "count": count})
+    total_network = sum(c["count"] for c in counts_by_level)
+    pipeline = [{"$match": {"to_user_id": user["user_id"]}}, {"$group": {"_id": "$level", "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}]
+    earnings_by_level = await db.commissions.aggregate(pipeline).to_list(10)
+    earnings_map = {e["_id"]: {"amount": e["total"], "transactions": e["count"]} for e in earnings_by_level}
+    return {"total_network": total_network, "by_level": counts_by_level, "earnings_by_level": earnings_map}
+
 @api_router.get("/wallet")
 async def get_wallet(user: dict = Depends(get_current_user)):
     wallet = await db.wallets.find_one({"user_id": user["user_id"]}, {"_id": 0})
