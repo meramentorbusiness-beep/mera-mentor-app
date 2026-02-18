@@ -1,0 +1,252 @@
+<analysis>**original_problem_statement:**
+The user wants to build a Mera Mentor online course platform with a multi-level referral and commission dashboard.
+
+**Phase 1 (Completed MVP):**
+- A 7-level referral commission structure (40%, 20%, 10%, 5%, 3%, 1.5%, 0.5%).
+- User authentication (Google OAuth).
+- A referral dashboard showing earnings, a unique referral link (with copy/share/QR code), and a list of referred users.
+- An admin panel to upload courses with video (YouTube links) and PDF materials.
+- A commission wallet showing balance and transaction history.
+- A mock Razorpay integration for course purchases.
+- An upsell flow after purchase.
+- The platform is branded as Mera Mentor with the tagline Seekho. Sikhao. Kamao.
+- The term Creator was replaced with User or Learner.
+
+**Phase 2 (In Progress):**
+The user provided a comprehensive list of advanced features. The agent has grouped them into batches for implementation.
+**Batch 1 & 2 (Currently being implemented):**
+- **Learning Experience:** Course progress tracking, certificate generation, video progress resume, notes/bookmarks, quizzes.
+- **Referral Engine:** Public referral landing page, leaderboard, referral campaigns (admin).
+- **Commission/Wallet:** Commission analytics charts.
+- **Marketplace:** Course reviews and ratings, coupon system.
+- **User Profile:** Onboarding wizard, gamification (streaks).
+**Future Batches:**
+- **Referral Engine:** Referral tree visualization, WhatsApp/SMS nudges.
+- **Commission/Wallet:** Real-time notifications (WebSockets), payout improvements (tax, receipts).
+- **Marketplace:** Course bundles, advanced upsells.
+- **User Profile:** Public user profiles.
+- **Admin Panel:** Advanced analytics, instructor/affiliate roles.
+- **Tech/Infra:** Email notification system (Resend), SEO, PWA support.
+- **Security:** Rate limiting, fraud detection, OTP for payouts.
+
+**User's preferred language**: English
+
+**what currently exists?**
+A full-stack application (FastAPI + React) branded as Mera Mentor. The MVP (Phase 1) is complete and was successfully tested. It includes user authentication, a 7-level referral system, a course marketplace with mock payments (Razorpay), an admin panel for course uploads, and a commission wallet. The backend uses MongoDB, despite the user's initial suggestion of PostgreSQL.
+
+**Last working item**:
+    - Last item agent was working: The agent was in the middle of implementing a large set of features from Phase 2 (Batches 1 & 2). It has just completed creating numerous new and updated files for both the frontend and backend to support these features (e.g., progress tracking, certificates, quizzes, leaderboard, etc.).
+    - Status: IN PROGRESS
+    - Agent Testing Done: N
+    - Which testing method agent to use? both. The immediate next steps are to restart the backend, compile the frontend to check for errors, and then run the  for a full end-to-end test of all the newly added features.
+    - User Testing Done: N
+
+**All Pending/In progress Issue list**:
+  - Issue 1: (P0) The application is currently in a broken state. A massive number of files for new features (Phase 2, Batches 1 & 2) have been written to disk but have not been compiled, integrated, or tested. The code is likely to contain compilation errors and bugs.
+
+  Issues Detail:
+  - Issue 1: 
+     - Attempted fixes: None. The files were just created.
+     - Next debug checklist: 
+        1. Restart the backend service using backend: stopped
+backend: started. Check supervisor logs for any startup errors (==> /var/log/supervisor/backend.err.log <==
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [71]
+INFO:     Stopping reloader process [48]
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [196] using WatchFiles
+
+==> /var/log/supervisor/backend.out.log <==).
+        2. Attempt to compile the frontend by running yarn install v1.22.22
+[1/4] Resolving packages...
+success Already up-to-date.
+Done in 0.99s.
+yarn run v1.22.22
+$ craco build
+Creating an optimized production build...
+Compiled with warnings.
+
+[eslint] 
+src/pages/CourseDetail.js
+  Line 24:6:  React Hook useEffect has missing dependencies: 'fetchCourse' and 'fetchLessons'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/Leaderboard.js
+  Line 23:44:  React Hook useEffect has a missing dependency: 'fetchLeaderboard'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/Upsell.js
+  Line 21:6:  React Hook useEffect has a missing dependency: 'fetchUpsell'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+File sizes after gzip:
+
+  279.68 kB  build/static/js/main.7456bacb.js
+  13.31 kB   build/static/css/main.78857504.css
+
+The project was built assuming it is hosted at /.
+You can control this with the homepage field in your package.json.
+
+The build folder is ready to be deployed.
+You may serve it with a static server:
+
+  yarn global add serve
+  serve -s build
+
+Find out more about deployment here:
+
+  https://cra.link/deployment
+
+Done in 58.31s.. Check the output for compilation errors.
+        3. Fix any errors found in steps 1 & 2.
+        4. Once the application is running, call  to perform a comprehensive end-to-end test of the new features like course progress, certificates, quizzes, and leaderboards.
+        5. Address all issues reported by the testing agent.
+     - Why fix this issue and what will be achieved with the fix? This is the primary task. Fixing this will make the new Phase 2 features functional and ready for user review.
+     - Status:  IN PROGRESS
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? both
+     - Blocked on other issue: None
+
+**In progress Task List**:
+  - Task 1: (P0) Complete the implementation of Phase 2 (Batches 1 & 2)
+     - Where to resume: The agent just finished creating all the necessary files. The next step is to integrate and debug them by attempting to restart the backend and build the frontend.
+     - What will be achieved with this? This will deliver the first major set of advanced features, including course progress tracking, certificates, quizzes, leaderboards, and more, moving the project beyond the initial MVP.
+     - Status:  IN PROGRESS
+     - Should Test frontend/backend/both after fix? both
+     - Blocked on something: No
+
+**Upcoming and Future Tasks**
+    Upcoming Tasks (Phase 2 - Remaining Batches):
+    - P1: **Referral Tree Visualization**: Implement an interactive org-chart for the user's downline using a library like .
+    - P1: **Real-Time Commission Notifications**: Use WebSockets or Server-Sent Events to provide instant toast notifications for earned commissions.
+    - P2: **Payout Improvements**: Add estimated payout dates, tax deduction display (TDS), and downloadable PDF receipts.
+    - P2: **Advanced Admin Analytics**: Implement dashboards for cohort analysis, referral funnels, and CSV data export.
+    - P2: **Instructor/Affiliate Roles**: Add new user roles with different permissions and commission structures.
+    - P2: **Email Notification System**: Integrate a real email service like Resend (currently mocked) for transactional emails.
+    - P2: **Security Hardening**: Implement rate limiting, fraud detection, and OTP for payout requests.
+
+    Future Tasks:
+    - P3: **WhatsApp & SMS Referral Nudges**: Integrate Twilio or a similar service to send automated messages.
+    - P3: **Public User Profiles**: Create shareable public profile pages for users.
+    - P3: **SEO & Performance**: Add meta tags, generate a sitemap, and implement caching.
+    - P3: **PWA Support**: Add a manifest and service worker.
+
+**Completed work in this session**
+- **Phase 1 MVP (DONE)**:
+  - Implemented core 7-level referral system logic on the backend.
+  - Created authentication flow with Google OAuth.
+  - Built referral dashboard with stats, link sharing, and user list.
+  - Developed admin panel for course creation (YouTube links + PDFs).
+  - Implemented commission wallet and transaction history.
+  - Set up a mock Razorpay payment flow.
+  - Applied Mera Mentor branding across the application.
+  - Successfully passed a full end-to-end test via .
+
+**Earlier issues found/mentioned but not fixed**
+   - None.
+
+**Known issue recurrence from previous fork**
+  - None.
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+- **Frontend**: React, Tailwind CSS, Shadcn/UI, Recharts (for charts)
+- **Backend**: FastAPI (Python)
+- **Database**: MongoDB
+- **Authentication**: JWT-based with Google OAuth
+- **Payments**: Razorpay (currently in mock mode)
+- **Deployment**: Docker container with supervisor for process management.
+
+**key DB schema**
+  - **users**: {email, name, referral_code, referred_by, referral_chain, roles, streak, xp}
+  - **courses**: {title, description, price, modules: [{title, lessons: [{title, video_url, content}]}]}
+  - **purchases**: {user_id, course_id, amount, status, created_at}
+  - **commissions**: {user_id, from_user_id, purchase_id, amount, level, created_at}
+  - **payouts**: {user_id, amount, status, requested_at, paid_at}
+  - **course_progress**: {user_id, course_id, completed_lessons: [lesson_id], last_watched_timestamp}
+  - **certificates**: {user_id, course_id, certificate_id, created_at}
+  - **quizzes**: {lesson_id, questions: [{...}], passing_score}
+  - **quiz_attempts**: {user_id, quiz_id, score, passed}
+  - **reviews**: {user_id, course_id, rating, text, created_at}
+  - **coupons**: {code, discount_type, value, expiry_date}
+  - **notifications**: {user_id, message, read, created_at}
+
+**changes in tech stack**
+  - The user initially suggested PostgreSQL for the database, but the agent implemented the application using **MongoDB**. This deviation should be noted.
+
+**All files of reference**
+- : The main FastAPI application file, heavily modified to include all new Phase 2 logic.
+- : Main router, updated with new routes for Phase 2 pages.
+- : Updated to include analytics charts and a Continue Learning card.
+- : New page to view course content, track progress, take quizzes, and add notes.
+- : New page to display the referral leaderboard.
+- : New admin page to manage quizzes.
+- : New public page for incoming referral traffic.
+- : New component for the multi-step user onboarding flow.
+
+**Areas that need refactoring**:
+-  is becoming a monolith containing all backend logic. It should be broken down into multiple files/routers for better maintainability as the project grows.
+
+**key api endpoints**
+- : Google OAuth login.
+- : Get all courses, get course details.
+- : CRUD operations for courses.
+- : Get referral dashboard data (earnings, referred users).
+- : Get wallet balance, history, and request payouts.
+- **New Endpoints**:
+  - : Mark a lesson as completed.
+  - : Generate a certificate upon completion.
+  - : Public endpoint to verify a certificate.
+  - : Get leaderboard data.
+  - : Get data for commission charts.
+  - : Get quiz for a lesson and submit answers.
+
+**Critical Info for New Agent**
+- You are in the middle of a major feature implementation (Phase 2, Batches 1 & 2). The files have been created but not compiled or tested. Your immediate task is to get the application running and then test the new features.
+- **MOCKED SYSTEMS**: Razorpay payments and the email notification system are currently **mocked** as the user does not have API keys. Do not ask for them. Implement the logic but simulate the external calls.
+- **DB Mismatch**: The user requested PostgreSQL, but the project is built on **MongoDB**. Continue using MongoDB.
+- **Priorities**: The user has clearly prioritized the feature list. Focus on completing Batches 1 & 2 before moving to other features like the referral tree or real-time notifications.
+
+**documents and test reports created in this job**
+  - 
+  -  (This report is for the Phase 1 MVP and is now outdated).
+
+**Last 10 User Messages and any pending HUMAN messages**
+1. **User (Latest)**: Confirmed priorities for Phase 2, stating to skip SMS integration for now as they don't have an API key, and to proceed with implementing Batch 1 and Batch 2.
+2. **Agent**: Acknowledged the user's choices, confirming SMS will be skipped and email will be mocked. Presented a plan for implementing Batches 1 & 2.
+3. **User**: Provided a very detailed Phase 2 prompt with 25 new feature requests, grouped into categories like Learning Experience, Referral Engine, etc., and specified a priority order.
+4. **Agent**: Finalized the Phase 1 MVP, generated the PRD, and presented the  summary.
+5. **User**: Provided clarification on the admin course upload feature: it's for admin only, YouTube is preferred for storage to protect content, and courses can have multiple videos. Requested a more attractive theme and a tagline for Mera Mentor.
+6. **Agent**: Asked clarifying questions about the course upload feature (admin vs. user upload, storage preference, etc.).
+7. **User**: Provided Razorpay as their payment gateway choice, requested a system for uploading video/PDF courses, and asked to rename Creator to User or Learner. The platform name is Mera Mentor.
+8. **Agent**: Took a screenshot and stated intent to run the testing agent.
+9. **Agent**: Reported backend is running and data is seeded.
+10. **Agent**: Reported all files for the MVP were created.
+
+**Project Health Check:**
+- **Broken**: The application is currently broken. A large number of files for new features have been added but not compiled or tested.
+- **Mocked**: Razorpay Payments, Email Notification System.
+
+**3rd Party Integrations**
+- **Emergent-managed Google Auth**: In use for user login.
+- **Razorpay**: Configured for use, but currently in a **mocked** state. No real keys are present.
+- **Resend / Nodemailer**: Planned for email notifications, but will be implemented in a **mocked** state.
+- **React-Social**: Used for social sharing buttons.
+- **qrcode.react**: Used for generating QR codes for referral links.
+- **recharts**: Used for displaying analytics charts on the dashboard.
+
+**Testing status**
+  - Testing agent used after significant changes: YES (for the initial MVP, but not for the current Phase 2 work).
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: []
+  - Known regressions: None known, but high probability after the recent large code drop.
+
+**Credentials to test flow:**
+The application uses Google OAuth. The testing agent was previously able to use mock credentials to test the flow. The agent should be able to create and use test users.
+
+**What agent forgot to execute**
+- The agent did not follow the user's initial tech stack suggestion of using **PostgreSQL**, opting for **MongoDB** instead without explanation or confirmation. This is the most significant deviation.</analysis>
