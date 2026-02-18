@@ -1,16 +1,18 @@
 import { useAuth, API } from "@/App";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, Wallet, BookOpen, LogOut, Menu, X, Shield, Trophy, Bell } from "lucide-react";
+import { LayoutDashboard, Users, Wallet, BookOpen, LogOut, Menu, X, Shield, Trophy, Bell, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/courses", label: "Courses", icon: BookOpen },
   { path: "/referrals", label: "Referrals", icon: Users },
+  { path: "/network", label: "Network", icon: GitBranch },
   { path: "/wallet", label: "Wallet", icon: Wallet },
   { path: "/leaderboard", label: "Leaderboard", icon: Trophy },
 ];
@@ -23,13 +25,53 @@ export default function Layout() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [notifOpen, setNotifOpen] = useState(false);
+  const sseRef = useRef(null);
 
   const allNav = user?.is_admin ? [...navItems, { path: "/admin/courses", label: "Admin", icon: Shield }] : navItems;
 
+  // SSE for real-time notifications
   useEffect(() => {
     fetchUnread();
+    
+    // Setup SSE connection
+    const setupSSE = () => {
+      try {
+        const eventSource = new EventSource(`${API}/notifications/stream`, { withCredentials: true });
+        sseRef.current = eventSource;
+        
+        eventSource.addEventListener("notification", (e) => {
+          const data = JSON.parse(e.data);
+          setUnreadCount(data.unread_count);
+          // Show toast for new notification
+          toast.info(data.title, { description: data.message, duration: 5000 });
+        });
+        
+        eventSource.addEventListener("unread_count", (e) => {
+          const data = JSON.parse(e.data);
+          setUnreadCount(data.count);
+        });
+        
+        eventSource.onerror = () => {
+          // Fallback to polling if SSE fails
+          eventSource.close();
+          sseRef.current = null;
+        };
+      } catch {
+        // SSE not supported, fallback to polling
+      }
+    };
+    
+    setupSSE();
+    
+    // Fallback polling
     const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearInterval(interval);
+      if (sseRef.current) {
+        sseRef.current.close();
+      }
+    };
   }, []);
 
   const fetchUnread = async () => {
@@ -46,7 +88,7 @@ export default function Layout() {
 
   const handleLogout = async () => { await logout(); navigate("/login", { replace: true }); };
 
-  const notifColors = { commission: "text-emerald-600 bg-emerald-50", referral: "text-indigo-600 bg-indigo-50", certificate: "text-amber-600 bg-amber-50", quiz: "text-purple-600 bg-purple-50", info: "text-slate-600 bg-slate-50" };
+  const notifColors = { commission: "text-emerald-600 bg-emerald-50", referral: "text-indigo-600 bg-indigo-50", certificate: "text-amber-600 bg-amber-50", quiz: "text-purple-600 bg-purple-50", payout: "text-rose-600 bg-rose-50", info: "text-slate-600 bg-slate-50" };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-body">
