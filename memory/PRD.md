@@ -8,7 +8,7 @@ Build a Multi-Level Referral & Commission Dashboard for an online course platfor
 - **Admin**: Manage courses (upload video lessons via YouTube, PDF resources), view platform stats
 
 ## Core Requirements
-- 7-level referral commission chain: L1=40%, L2=20%, L3=10%, L4=5%, L5=3%, L6=1.5%, L7=0.5%
+- 5-level referral commission chain: L1=40%, L2=12%, L3=6%, L4=3%, L5=1% (Total 62%, Platform keeps 38%)
 - Currency: INR (₹)
 - Auth: Google OAuth (Emergent Auth)
 - Payment: Razorpay (MOCK mode until keys provided)
@@ -19,44 +19,64 @@ Build a Multi-Level Referral & Commission Dashboard for an online course platfor
 - **Backend**: FastAPI + MongoDB (Motor async driver)
 - **Auth**: Emergent Google OAuth + session cookies
 - **Real-time**: Server-Sent Events (SSE) for notifications
+- **Storage**: Mock local storage (ready for R2/S3 integration)
 
 ## What's Been Implemented
 
 ### Phase 1 - MVP (Feb 18, 2026) ✅
 1. Google OAuth login with referral code capture from URL
 2. Dashboard with earnings stats, referral link (copy/share), QR code, commission pyramid
-3. Referred Users list with Pending/Active/Churned tabs, expandable cards
+3. Referred Users list with Pending/Active/Churned tabs
 4. Commission Wallet with payout requests, transaction history
 5. Course Marketplace with purchase flow (mock Razorpay)
-6. Course Detail page with protected video player and lesson sidebar
+6. Course Detail page with protected video player
 7. Upsell flow after course purchase
-8. Admin Panel - course CRUD, lesson management, resource management, platform stats
-9. Multi-level commission processing (7 levels deep)
-10. Seed data: 7 courses with lessons and resources
+8. Admin Panel - course CRUD, lesson management
+9. Multi-level commission processing
+10. Seed data: 7 courses with lessons
 
 ### Phase 2 - Batches 1 & 2 (Feb 18, 2026) ✅
-1. **Course Progress Tracking** - Mark lessons complete, video resume
-2. **Certificate Generation** - Auto-generated upon course completion
-3. **Quiz System** - Admin creates quizzes, users submit answers, scoring with pass/fail
-4. **Reviews & Ratings** - Course reviews with verified badge
-5. **Leaderboard** - Period filters (weekly/monthly/all), badges (bronze/silver/gold/diamond)
-6. **Commission Analytics Charts** - 30-day earnings LineChart, commission-by-level PieChart
-7. **Coupon System** - Admin creates coupons, validation with discount calculation
-8. **Notifications** - Real-time bell with unread count, popover with notification types
-9. **Gamification** - Streak tracking, XP system, badges displayed in UI
-10. **Referral Landing Page** - Public page for incoming referral traffic
+1. Course Progress Tracking - Mark lessons complete
+2. Certificate Generation - Auto-generated upon completion
+3. Quiz System - Admin creates quizzes, users submit answers
+4. Reviews & Ratings - Course reviews with verified badge
+5. Leaderboard - Period filters, badges
+6. Commission Analytics Charts - 30-day earnings
+7. Coupon System - Admin creates coupons
+8. Notifications - Real-time bell with unread count
+9. Gamification - Streak tracking, XP system
+10. Referral Landing Page - Public page for referral traffic
 
 ### Phase 3 - Batch 3 (Feb 18, 2026) ✅
-1. **Referral Tree Visualization** - Interactive org-chart using react-d3-tree with zoom/reset controls
-2. **Real-time Notifications (SSE)** - Server-Sent Events for instant toast notifications
-3. **Payout Improvements**:
-   - TDS calculation (10% for payouts > ₹5,000)
-   - Estimated processing dates (2-3 business days)
-   - PDF receipt generation for payouts
+1. Referral Tree Visualization - Interactive D3 tree
+2. Real-time SSE Notifications - Instant toast notifications
+3. Payout Improvements - TDS (10% > ₹5,000), estimated dates, PDF receipts
+
+### Phase 4 - Media Upload & Commission Update (Feb 18, 2026) ✅
+1. **Commission Structure Updated**: 7 levels → 5 levels
+   - L1: 40%, L2: 12%, L3: 6%, L4: 3%, L5: 1%
+   - Total payout: 62% (was 80%)
+   - Platform keeps: 38% (was 20%)
+   - **Savings**: +₹180 per ₹1,000 sale
+
+2. **Media Upload System (Mock Storage)**:
+   - Admin can upload videos (MP4, MOV, AVI, WebM - max 2GB)
+   - Admin can upload PDFs (max 50MB)
+   - Admin can upload images (JPEG, PNG, WebP - max 10MB)
+   - Drag-and-drop upload with progress bar
+   - Media Library with filter by type
+   - Secure file serving with auth checks
+   - Ready for R2/S3 integration when keys provided
+
+3. **Enhanced Admin Panel**:
+   - New tabs: Courses | Media Library | Settings
+   - Commission structure visualization
+   - Storage configuration display
+   - Per-lesson video source toggle (YouTube or Upload)
+   - Free preview toggle for lessons and resources
 
 ## Testing Results (Feb 18, 2026)
 - **Backend**: 92/92 tests passed (100%)
-- **Frontend**: All pages verified working
 - **Test Files**: 
   - `/app/backend/tests/test_phase2_features.py`
   - `/app/backend/tests/test_phase3_comprehensive.py`
@@ -64,111 +84,79 @@ Build a Multi-Level Referral & Commission Dashboard for an online course platfor
 
 ## API Endpoints Summary
 
+### Media Upload (NEW)
+- `POST /api/admin/media/upload` - Upload video/PDF/image
+- `GET /api/admin/media` - List all uploaded media
+- `DELETE /api/admin/media/{media_id}` - Delete media
+- `PATCH /api/admin/media/{media_id}` - Update media metadata
+- `GET /api/media/video/{lesson_id}` - Serve lesson video (auth required)
+- `GET /api/media/pdf/{resource_id}` - Serve PDF (auth required)
+- `GET /api/media/serve/{file_key}` - Serve file with signed URL
+- `GET /api/admin/commission-settings` - Get commission config
+
 ### Authentication
 - `POST /api/auth/session` - Google OAuth callback
 - `GET /api/auth/me` - Get current user
 - `POST /api/auth/logout` - Logout
-- `PUT /api/auth/profile` - Update profile
 
 ### Courses
 - `GET /api/courses` - List all courses (public)
-- `GET /api/courses/:id` - Course detail (public)
+- `GET /api/courses/:id` - Course detail
 - `GET /api/courses/:id/lessons` - Lessons (requires purchase)
-- `GET /api/courses/:id/upsell` - Get upsell course
-
-### Progress & Certificates
-- `POST /api/progress/complete` - Mark lesson complete
-- `GET /api/progress/continue` - Continue learning list
-- `GET /api/certificates` - User certificates
-- `GET /api/verify/:certificateId` - Verify certificate (public)
-
-### Quizzes & Reviews
-- `GET /api/quizzes/:courseId` - Course quizzes
-- `POST /api/quizzes/:quizId/submit` - Submit quiz
-- `GET /api/reviews/:courseId` - Course reviews
-- `POST /api/reviews` - Add review
 
 ### Referrals & Network
 - `GET /api/referrals/stats` - Referral stats
-- `GET /api/referrals/users` - Referred users list
-- `GET /api/referrals/counts` - Status counts
 - `GET /api/referrals/tree` - Referral tree visualization
 - `GET /api/referrals/tree-stats` - Tree stats by level
-- `GET /api/referral/:code` - Referral landing page data
 
 ### Wallet & Payouts
 - `GET /api/wallet` - Wallet balance
 - `POST /api/wallet/payout/preview` - Preview with TDS
 - `POST /api/wallet/payout` - Request payout
-- `GET /api/wallet/transactions` - Transaction history
 - `GET /api/wallet/payouts/:id/receipt` - Payout receipt
 
-### Notifications
-- `GET /api/notifications` - All notifications
-- `GET /api/notifications/unread-count` - Unread count
-- `POST /api/notifications/mark-read` - Mark all read
-- `GET /api/notifications/stream` - SSE real-time stream
-
-### Leaderboard & Analytics
-- `GET /api/leaderboard` - Leaderboard
-- `GET /api/leaderboard/my-rank` - User rank
-- `GET /api/analytics/earnings` - 30-day earnings
-- `GET /api/analytics/commission-by-level` - Commission breakdown
-
-### Admin
-- `GET /api/admin/stats` - Platform stats
-- `POST/PUT/DELETE /api/admin/courses` - Course CRUD
-- `POST /api/admin/quizzes` - Create quiz
-- `POST /api/admin/coupons` - Create coupon
-
-### Payments
-- `POST /api/payments/create-order` - Create payment order
-- `POST /api/payments/verify` - Verify payment
-
 ## MOCKED Systems
-- **Razorpay**: Payment gateway is mocked - purchases complete immediately
-- **Email Notifications**: Notifications stored in DB but not actually sent
+- **Razorpay**: Payment gateway is mocked
+- **Email Notifications**: Stored in DB but not sent
+- **Cloud Storage**: Using local mock storage (ready for R2/S3)
+
+## Environment Variables for Cloud Storage (When Ready)
+```bash
+# Cloudflare R2
+STORAGE_MODE=r2
+R2_ACCOUNT_ID=your_account_id
+R2_ACCESS_KEY_ID=your_access_key
+R2_SECRET_ACCESS_KEY=your_secret
+R2_BUCKET_NAME=mera-mentor-media
+
+# OR AWS S3
+STORAGE_MODE=s3
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_REGION=ap-south-1
+AWS_BUCKET_NAME=mera-mentor-media
+```
 
 ## Prioritized Backlog
 
 ### P0 - Critical (Next Steps)
-- Razorpay real key integration (user needs Razorpay account)
-- WhatsApp/SMS referral nudges (Twilio integration)
-- Email notification system (Resend integration)
+- Razorpay real key integration
+- Cloud storage integration (R2/S3 when keys provided)
 
 ### P1 - Important
-- Instructor/Affiliate roles with different permissions
-- Advanced admin analytics (cohort analysis, CSV export)
-- Public user profiles
-- Course bundles and advanced upsells
+- WhatsApp/SMS referral nudges (Twilio)
+- Email notification system (Resend)
+- Instructor/Affiliate roles
 
 ### P2 - Nice to Have
-- PWA support (manifest, service worker)
+- Video transcoding integration (Bunny.net/Cloudflare Stream)
+- PWA support
 - SEO & meta tags
 - Rate limiting and fraud detection
-- OTP for payout requests
-- Dark mode toggle
-
-## Database Collections
-- `users` - User profiles with referral_chain
-- `user_sessions` - Session tokens
-- `courses` - Course content
-- `purchases` - Purchase records
-- `commissions` - Commission records
-- `wallets` - User wallets
-- `payouts` - Payout requests
-- `progress` - Lesson completion
-- `certificates` - Generated certificates
-- `quizzes` - Quiz questions
-- `quiz_attempts` - Quiz submissions
-- `reviews` - Course reviews
-- `coupons` - Discount codes
-- `notifications` - User notifications
-- `xp_log` - XP history
 
 ## Key Technical Details
 - TDS Rate: 10% for payouts > ₹5,000
 - Min Withdrawal: ₹100
-- Commission Total: 80% (20% platform fee)
+- Commission Total: 62% (38% platform fee)
+- Max upload sizes: Video 2GB, PDF 50MB, Image 10MB
 - SSE heartbeat: every 30 seconds
-- Estimated payout processing: 2-3 business days
