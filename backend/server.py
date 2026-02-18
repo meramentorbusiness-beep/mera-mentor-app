@@ -85,11 +85,20 @@ async def add_xp(user_id: str, amount: int, reason: str):
     await db.xp_log.insert_one({"user_id": user_id, "amount": amount, "reason": reason, "created_at": now_iso()})
 
 async def add_notification(user_id: str, title: str, message: str, ntype: str = "info"):
-    await db.notifications.insert_one({
-        "notification_id": f"notif_{uuid.uuid4().hex[:10]}", "user_id": user_id,
+    notif_id = f"notif_{uuid.uuid4().hex[:10]}"
+    notif = {
+        "notification_id": notif_id, "user_id": user_id,
         "title": title, "message": message, "type": ntype,
         "read": False, "created_at": now_iso(),
-    })
+    }
+    await db.notifications.insert_one(notif)
+    # Trigger real-time SSE notification
+    count = await db.notifications.count_documents({"user_id": user_id, "read": False})
+    await notify_user_sse(user_id, "notification", {"notification_id": notif_id, "title": title, "message": message, "type": ntype, "unread_count": count})
+
+async def notify_user_sse(user_id: str, event_type: str, data: dict):
+    """Send real-time notification to connected SSE clients (forward declaration)"""
+    pass  # Will be overwritten when routes are defined
 
 # ---- Auth Routes ----
 @api_router.post("/auth/session")
