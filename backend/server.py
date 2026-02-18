@@ -405,6 +405,51 @@ async def mark_notifications_read(user: dict = Depends(get_current_user)):
     await db.notifications.update_many({"user_id": user["user_id"], "read": False}, {"$set": {"read": True}})
     return {"message": "All marked as read"}
 
+# Store for SSE connections (in production, use Redis pub/sub)
+sse_connections: Dict[str, list] = {}
+
+async def notify_user_sse(user_id: str, event_type: str, data: dict):
+    """Send real-time notification to connected SSE clients"""
+    if user_id in sse_connections:
+        message = f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
+        for queue in sse_connections[user_id]:
+            await queue.put(message)
+
+@api_router.get("/notifications/stream")
+async def notifications_stream(request: Request, user: dict = Depends(get_current_user)):
+    """Server-Sent Events endpoint for real-time notifications"""
+    user_id = user["user_id"]
+    queue = asyncio.Queue()
+    if user_id not in sse_connections:
+        sse_connections[user_id] = []
+    sse_connections[user_id].append(queue)
+    
+    async def event_generator():
+        try:
+            # Send initial connection message
+            yield f"event: connected\ndata: {json.dumps({'status': 'connected', 'user_id': user_id})}\n\n"
+            # Send initial unread count
+            count = await db.notifications.count_documents({"user_id": user_id, "read": False})
+            yield f"event: unread_count\ndata: {json.dumps({'count': count})}\n\n"
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    message = await asyncio.wait_for(queue.get(), timeout=30.0)
+                    yield message
+                except asyncio.TimeoutError:
+                    # Send heartbeat
+                    yield f"event: heartbeat\ndata: {json.dumps({'time': now_iso()})}\n\n"
+        finally:
+            if user_id in sse_connections and queue in sse_connections[user_id]:
+                sse_connections[user_id].remove(queue)
+                if not sse_connections[user_id]:
+                    del sse_connections[user_id]
+    
+    return StreamingResponse(event_generator(), media_type="text/event-stream", headers={
+        "Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"
+    })
+
 # ---- Leaderboard ----
 @api_router.get("/leaderboard")
 async def get_leaderboard(period: str = "all"):
