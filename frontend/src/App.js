@@ -67,6 +67,7 @@ function AppRouter() {
         <Route path="courses/:courseId" element={<CourseDetail />} />
         <Route path="upsell/:courseId" element={<Upsell />} />
         <Route path="leaderboard" element={<Leaderboard />} />
+        <Route path="network" element={<ReferralTree />} />
         <Route path="admin/courses" element={<AdminCourses />} />
       </Route>
     </Routes>
