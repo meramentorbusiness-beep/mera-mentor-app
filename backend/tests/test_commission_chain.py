@@ -49,12 +49,10 @@ class TestFiveLevelCommissionChain:
         # Expected rates: 40%, 12%, 6%, 3%, 1%
         expected = [
             {"level": 1, "percentage": 40, "example_earning": 200.0},   # 40% of 500
-            {"level": 2, "percentage": 20, "example_earning": 100.0},   # 20% of 500
-            {"level": 3, "percentage": 10, "example_earning": 50.0},    # 10% of 500
-            {"level": 4, "percentage": 5, "example_earning": 25.0},     # 5% of 500
-            {"level": 5, "percentage": 3, "example_earning": 15.0},     # 3% of 500
-            {"level": 6, "percentage": 1.5, "example_earning": 7.5},    # 1.5% of 500
-            {"level": 7, "percentage": 0.5, "example_earning": 2.5},    # 0.5% of 500
+            {"level": 2, "percentage": 12, "example_earning": 60.0},    # 12% of 500
+            {"level": 3, "percentage": 6, "example_earning": 30.0},     # 6% of 500
+            {"level": 4, "percentage": 3, "example_earning": 15.0},     # 3% of 500
+            {"level": 5, "percentage": 1, "example_earning": 5.0},      # 1% of 500
         ]
         
         for i, level in enumerate(levels):
@@ -72,9 +70,9 @@ class TestFiveLevelCommissionChain:
         data = response.json()
         
         total_percent = sum(l["percentage"] for l in data["levels"])
-        # 40 + 20 + 10 + 5 + 3 + 1.5 + 0.5 = 80%
-        assert total_percent == 80
-        print(f"✅ Total commission distribution: {total_percent}% (remaining 20% is platform fee)")
+        # 40 + 12 + 6 + 3 + 1 = 62%
+        assert total_percent == 62
+        print(f"✅ Total commission distribution: {total_percent}% (remaining 38% is platform fee)")
 
     def test_commission_calculation_for_1000_rupee_course(self):
         """Verify commission amounts for a ₹1000 course purchase"""
@@ -84,12 +82,10 @@ class TestFiveLevelCommissionChain:
         course_price = 1000
         expected_commissions = {
             1: 400,    # 40% of 1000
-            2: 200,    # 20% of 1000
-            3: 100,    # 10% of 1000
-            4: 50,     # 5% of 1000
-            5: 30,     # 3% of 1000
-            6: 15,     # 1.5% of 1000
-            7: 5,      # 0.5% of 1000
+            2: 120,    # 12% of 1000
+            3: 60,     # 6% of 1000
+            4: 30,     # 3% of 1000
+            5: 10,     # 1% of 1000
         }
         
         for level_data in data["levels"]:
