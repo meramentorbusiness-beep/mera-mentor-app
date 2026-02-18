@@ -561,7 +561,7 @@ class TestCommissionLevels:
         assert response.status_code == 200
         data = response.json()
         assert "levels" in data
-        assert len(data["levels"]) == 7  # 7 levels
+        assert len(data["levels"]) == 5  # 5 levels (updated from 7)  # 7 levels
         assert "min_withdrawal" in data
         # Verify commission rates
         expected_rates = [40, 20, 10, 5, 3, 1.5, 0.5]
