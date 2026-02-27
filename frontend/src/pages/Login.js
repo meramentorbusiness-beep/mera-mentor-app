@@ -83,7 +83,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-slate-500 text-xs mt-5 font-body">
-          7-level deep referral chain with commissions on every renewal
+          5-level deep referral chain with commissions on every purchase
         </p>
       </div>
     </div>
