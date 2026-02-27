@@ -12,7 +12,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, 
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState({ earned_today: 0, earned_week: 0, earned_lifetime: 0, total_referred: 0 });
+  const [stats, setStats] = useState({ total_earned: 0, this_month: 0, total_referrals: 0 });
   const [showQR, setShowQR] = useState(false);
   const [commissionLevels, setCommissionLevels] = useState([]);
   const [continueLearning, setContinueLearning] = useState([]);
