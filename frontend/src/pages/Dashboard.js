@@ -197,28 +197,35 @@ export default function Dashboard() {
         <div className="lg:col-span-2">
           <Card className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 h-full animate-slide-up animate-slide-up-3">
             <h2 className="font-heading text-sm font-semibold text-slate-900 mb-1">Commission Structure</h2>
-            <p className="text-[10px] text-slate-400 mb-4">Earn on 7 levels deep</p>
+            <p className="text-[10px] text-slate-400 mb-4">Earn on 5 levels deep</p>
             <div className="space-y-2">
               {commissionLevels.map((l, i) => {
                 const w = (l.percentage / maxBar) * 100;
-                const colors = ["bg-indigo-600", "bg-indigo-500", "bg-violet-500", "bg-purple-500", "bg-fuchsia-500", "bg-pink-500", "bg-rose-400"];
+                const colors = ["bg-indigo-600", "bg-violet-500", "bg-purple-500", "bg-fuchsia-500", "bg-pink-500"];
                 return (
                   <div key={l.level}>
                     <div className="flex justify-between mb-0.5">
                       <span className="text-[10px] text-slate-500">{i === 0 ? "Direct" : `Level ${l.level}`}</span>
-                      <span className="font-number text-[10px] font-bold text-slate-600">{l.percentage}% = {fmt(l.example_earning)}</span>
+                      <span className="font-number text-[10px] font-bold text-slate-600">{fmt(l.example_earning)} <span className="text-slate-400">({l.percentage}%)</span></span>
                     </div>
                     <div className="h-5 bg-slate-100 rounded-full overflow-hidden">
                       <div className={`commission-level-bar h-full ${colors[i]} rounded-full flex items-center justify-end pr-1.5`} style={{ width: `${w}%` }}>
-                        <span className="text-[8px] text-white font-bold font-number">{l.percentage}%</span>
+                        <span className="text-[8px] text-white font-bold font-number">{fmt(l.example_earning)}</span>
                       </div>
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div className="mt-3 bg-amber-50 rounded-lg p-2.5">
-              <p className="text-[10px] text-amber-800"><span className="font-semibold">Example:</span> {fmt(500)} course = you earn {fmt(200)} direct + {fmt(100)} from L2 and more!</p>
+            <div className="mt-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-3">
+              <p className="text-[10px] text-slate-600 mb-2 font-medium">💰 Your earning potential on {fmt(799)} course:</p>
+              <div className="grid grid-cols-2 gap-1 text-[10px]">
+                <div><span className="text-slate-500">L1 (5 people):</span> <span className="font-number font-bold text-indigo-600">{fmt(5 * 319.60)}</span></div>
+                <div><span className="text-slate-500">L2 (25):</span> <span className="font-number font-bold text-indigo-600">{fmt(25 * 95.88)}</span></div>
+                <div><span className="text-slate-500">L3 (125):</span> <span className="font-number font-bold text-indigo-600">{fmt(125 * 47.94)}</span></div>
+                <div><span className="text-slate-500">L4 (625):</span> <span className="font-number font-bold text-indigo-600">{fmt(625 * 23.97)}</span></div>
+              </div>
+              <p className="text-[11px] text-indigo-700 font-bold mt-2">Total: {fmt(50000)}+ 🔥</p>
             </div>
           </Card>
         </div>
