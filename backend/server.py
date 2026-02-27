@@ -654,19 +654,31 @@ async def get_referral_tree(user: dict = Depends(get_current_user), db: AsyncSes
 @api_router.get("/referrals/tree-stats")
 async def get_referral_tree_stats(user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Get referral tree statistics by level"""
+    from sqlalchemy import text
+    
     # This is a simplified version - counts direct referrals at each level
     counts = []
     for level in range(1, 6):
         # Count users at this level in referral chain
         if level == 1:
             stmt = select(func.count(User.id)).where(User.referred_by_id == user["user_id"])
+            result = await db.execute(stmt)
+            count = result.scalar() or 0
         else:
-            # For deeper levels, we'd need to traverse the chain
-            stmt = select(func.count(User.id)).where(
-                func.array_position(User.referral_chain, user["user_id"]) == level
-            )
-        result = await db.execute(stmt)
-        count = result.scalar() or 0
+            # For deeper levels, use JSON array position check
+            # referral_chain is stored as JSON array, so we use json_array_elements to find position
+            try:
+                # PostgreSQL: Check if user_id appears at position (level-1) in the chain (0-indexed)
+                query = text("""
+                    SELECT COUNT(*) FROM users 
+                    WHERE referral_chain IS NOT NULL 
+                    AND jsonb_array_length(referral_chain::jsonb) >= :level
+                    AND referral_chain::jsonb->>(:level_idx)::int = :user_id
+                """)
+                result = await db.execute(query, {"level": level, "level_idx": level - 1, "user_id": user["user_id"]})
+                count = result.scalar() or 0
+            except Exception:
+                count = 0
         counts.append({"level": level, "count": count})
     
     total = sum(c["count"] for c in counts)
