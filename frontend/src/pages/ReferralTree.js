@@ -13,7 +13,7 @@ const statusColors = {
   churned: "bg-red-100 text-red-700",
 };
 
-const levelColors = ["#4f46e5", "#7c3aed", "#a855f7", "#d946ef", "#ec4899", "#f43f5e", "#f97316"];
+const levelColors = ["#4f46e5", "#7c3aed", "#a855f7", "#ec4899", "#f97316"];  // 5 levels
 
 const CustomNode = ({ nodeDatum }) => {
   const level = nodeDatum.attributes?.level || 0;
