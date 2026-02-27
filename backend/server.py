@@ -1167,6 +1167,27 @@ async def seed_data():
     await db.media.create_index("lesson_id")
     await db.media_access_log.create_index("user_id")
 
+# ---- Health Check ----
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint for Docker/monitoring"""
+    try:
+        # Check MongoDB connection
+        await db.command("ping")
+        db_status = "connected"
+    except Exception:
+        db_status = "disconnected"
+    
+    return {
+        "status": "ok",
+        "timestamp": now_iso(),
+        "database": db_status,
+        "storage_mode": STORAGE_MODE,
+        "version": "2.0.0",
+        "commission_levels": len(COMMISSION_LEVELS),
+        "total_commission_rate": sum(COMMISSION_LEVELS.values()) * 100,
+    }
+
 app.include_router(api_router)
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','), allow_methods=["*"], allow_headers=["*"])
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
