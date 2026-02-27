@@ -27,10 +27,17 @@ if RAZORPAY_ENABLED:
     import razorpay
     razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
-# Commission levels - 5 levels (Option B: 40%, 12%, 6%, 3%, 1% = 62% total, platform keeps 38%)
-COMMISSION_LEVELS = {1: 0.40, 2: 0.12, 3: 0.06, 4: 0.03, 5: 0.01}
+# Commission levels from environment (Option B: 40%, 12%, 6%, 3%, 1% = 62% total, platform keeps 38%)
+COMMISSION_LEVELS = {
+    1: float(os.environ.get("COMMISSION_L1", "40")) / 100,
+    2: float(os.environ.get("COMMISSION_L2", "12")) / 100,
+    3: float(os.environ.get("COMMISSION_L3", "6")) / 100,
+    4: float(os.environ.get("COMMISSION_L4", "3")) / 100,
+    5: float(os.environ.get("COMMISSION_L5", "1")) / 100,
+}
 MIN_WITHDRAWAL = 100
 ADMIN_EMAILS = os.environ.get("ADMIN_EMAILS", "").split(",")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://meramentor.in")
 
 # Media Storage Configuration (Mock mode - switch to R2/S3 when keys provided)
 STORAGE_MODE = os.environ.get("STORAGE_MODE", "mock")  # "mock", "r2", "s3"
