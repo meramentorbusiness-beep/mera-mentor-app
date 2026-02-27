@@ -215,9 +215,9 @@ export default function ReferralTree() {
         <div className="p-3 border-t border-slate-100 bg-slate-50/50">
           <div className="flex flex-wrap items-center gap-3 text-[10px]">
             <span className="text-slate-500 font-medium">Legend:</span>
-            {[0, 1, 2, 3, 4, 5, 6].map(l => (
+            {[0, 1, 2, 3, 4, 5].map(l => (
               <div key={l} className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: levelColors[l] }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: levelColors[l] || "#94a3b8" }} />
                 <span className="text-slate-600">{l === 0 ? "You" : `L${l}`}</span>
               </div>
             ))}
