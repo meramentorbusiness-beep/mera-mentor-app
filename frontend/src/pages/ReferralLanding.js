@@ -88,7 +88,7 @@ export default function ReferralLanding() {
           {[
             { icon: BookOpen, title: "Learn Skills", desc: "Expert-curated courses in tech, marketing & more" },
             { icon: Users, title: "Build Network", desc: "Refer friends and grow your learning community" },
-            { icon: Star, title: "Earn Money", desc: "Up to 40% commission on 7 levels deep" },
+            { icon: Star, title: "Earn Money", desc: "Up to 40% commission on 5 levels deep" },
           ].map((b, i) => (
             <Card key={i} className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-5 text-center">
               <div className="w-10 h-10 rounded-lg bg-indigo-600/20 flex items-center justify-center mx-auto mb-3">
