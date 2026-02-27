@@ -113,7 +113,7 @@ export default function ReferralTree() {
     <div className="animate-slide-up" data-testid="referral-tree-page">
       <div className="mb-5">
         <h1 className="font-heading text-2xl md:text-3xl font-bold text-slate-900 mb-0.5">Referral Network</h1>
-        <p className="text-slate-400 font-body text-sm">Visualize your 7-level referral tree</p>
+        <p className="text-slate-400 font-body text-sm">Visualize your 5-level referral tree</p>
       </div>
       
       {/* Stats Cards */}
