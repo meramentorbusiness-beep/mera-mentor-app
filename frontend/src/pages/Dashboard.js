@@ -75,7 +75,7 @@ export default function Dashboard() {
             {myRank?.badge !== "none" && myRank?.badge && <span className="text-amber-400 text-xs capitalize font-body">{myRank.badge}</span>}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6 -mb-12 relative z-20">
-            {[{ label: "Earned today", value: stats.earned_today }, { label: "Last 7 days", value: stats.earned_week }, { label: "Lifetime", value: stats.earned_lifetime }].map((s, i) => (
+            {[{ label: "Earned today", value: stats.total_earned || 0 }, { label: "This month", value: stats.this_month || 0 }, { label: "Lifetime", value: stats.total_earned || 0 }].map((s, i) => (
               <Card key={i} className={`stat-card bg-white rounded-xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-4 text-left animate-slide-up animate-slide-up-${i + 1}`} data-testid={`stat-card-${i}`}>
                 <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1">{s.label}</p>
                 <p className="font-number text-xl md:text-2xl font-extrabold text-slate-900">{fmt(s.value)}</p>
