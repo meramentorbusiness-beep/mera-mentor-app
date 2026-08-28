@@ -9,9 +9,8 @@ FROM node:18-slim AS frontend-builder
 
 WORKDIR /frontend
 
-# Install dependencies (yarn.lock is optional — copied if present)
+# Install dependencies
 COPY frontend/package.json ./
-COPY frontend/yarn.loc[k] ./
 RUN yarn install --network-timeout 300000
 
 # Copy source
