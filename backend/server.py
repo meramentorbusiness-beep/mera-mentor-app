@@ -1,6 +1,7 @@
 # Mera Mentor - FastAPI Backend with PostgreSQL/Supabase
 from fastapi import FastAPI, APIRouter, Request, Response, HTTPException, Depends, UploadFile, File, Form
 from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1715,6 +1716,24 @@ async def health_check(db: AsyncSession = Depends(get_db)):
 # ========== Include Router ==========
 
 app.include_router(api_router)
+
+# ========== Serve React Frontend (production) ==========
+
+STATIC_BUILD_DIR = ROOT_DIR / "static"
+
+if STATIC_BUILD_DIR.exists():
+    # Serve React's hashed JS/CSS/media assets
+    react_assets = STATIC_BUILD_DIR / "static"
+    if react_assets.exists():
+        app.mount("/static", StaticFiles(directory=str(react_assets)), name="react-assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_react_spa(full_path: str):
+        """Catch-all: serve React index.html for all non-API routes (SPA routing)."""
+        index_file = STATIC_BUILD_DIR / "index.html"
+        if index_file.exists():
+            return FileResponse(str(index_file))
+        return JSONResponse({"message": "Frontend not built"}, status_code=404)
 
 # ========== Startup/Shutdown Events ==========
 

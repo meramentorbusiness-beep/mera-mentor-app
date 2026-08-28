@@ -127,17 +127,23 @@ ADMIN_EMAILS=admin@meramentor.in
 - 5 courses with lessons
 - 1 coupon (LAUNCH20 - 20% off)
 
-## Deployment Ready
+## Deployment (Render - Single Web Service)
 
-### Backend (Hostinger/VPS)
-```bash
-docker-compose up -d
-```
+### Root Dockerfile (multi-stage)
+- Stage 1: Node 18 → builds React with `REACT_APP_BACKEND_URL=""`
+- Stage 2: Python 3.11 → FastAPI serves API + React static files
 
-### Frontend (Vercel)
-```bash
-vercel --prod
-```
+### Files
+- `/Dockerfile` — root-level, used by Render
+- `/render.yaml` — Render config (dockerfilePath: ./Dockerfile)
+- `/.dockerignore` — excludes node_modules, build artifacts
+- `/docker-compose.yml` — local full-stack testing
+
+### Render Setup
+1. Connect GitHub repo in Render dashboard
+2. Create Web Service → Docker
+3. Set environment variables (see render.yaml for list)
+4. Deploy
 
 ## Next Steps to Launch
 1. ~~Add Razorpay keys for real payments~~ ✅ DONE
