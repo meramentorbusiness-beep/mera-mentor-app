@@ -23,6 +23,13 @@ Build a Multi-Level Referral & Commission Dashboard for an online course platfor
 | **Total** | **62%** | **₹495.38** |
 | **Platform Keeps** | **38%** | **₹303.62** |
 
+
+## Deployment Fixes (Aug 29, 2026)
+- Removed non-existent `emergentintegrations==0.1.0` from `backend/requirements.txt` (Render pip install was failing; package was never imported anywhere in `/app/backend/`).
+- Bumped Docker frontend build stage from `node:18-slim` → `node:20-slim` in `/app/Dockerfile` to satisfy `react-router-dom@7.x` engine requirement of `node >=20.0.0`.
+- Verified locally: `pip install -r requirements.txt` exit 0, `yarn install` exit 0 on Node 20.
+
+
 ## Migration Completed (Feb 27, 2026)
 
 ### What Changed

@@ -5,7 +5,7 @@
 # =============================================================
 
 # ---- Stage 1: Build React ----
-FROM node:18-slim AS frontend-builder
+FROM node:20-slim AS frontend-builder
 
 WORKDIR /frontend
 
