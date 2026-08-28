@@ -29,39 +29,43 @@ export default function Courses() {
   const handlePurchase = async (course) => {
     setPurchasing(course.course_id);
     try {
-      // Create order
       const orderRes = await axios.post(`${API}/payments/create-order`, { course_id: course.course_id }, { withCredentials: true });
       const order = orderRes.data;
 
-      if (order.razorpay_enabled && order.razorpay_key_id) {
+      if (order.key_id) {
         // Real Razorpay checkout
         const options = {
-          key: order.razorpay_key_id,
-          amount: order.amount,
+          key: order.key_id,
+          amount: order.amount_paise,
           currency: order.currency,
           name: "Mera Mentor",
-          description: order.course_title,
+          description: order.course?.title || course.title,
           order_id: order.order_id,
           handler: async (response) => {
             await axios.post(`${API}/payments/verify`, {
-              order_id: order.order_id, course_id: course.course_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
             }, { withCredentials: true });
-            toast.success(`Successfully purchased ${order.course_title}!`);
+            toast.success(`Successfully purchased ${order.course?.title || course.title}!`);
             fetchPurchases();
             navigate(`/upsell/${course.course_id}`);
           },
           prefill: { name: user?.name, email: user?.email },
           theme: { color: "#4F46E5" },
+          modal: { ondismiss: () => setPurchasing(null) },
         };
         const rzp = new window.Razorpay(options);
         rzp.open();
+        return; // setPurchasing handled by modal ondismiss / handler
       } else {
-        // Simulated payment (no Razorpay keys)
-        await axios.post(`${API}/payments/verify`, { order_id: order.order_id, course_id: course.course_id }, { withCredentials: true });
-        toast.success(`Successfully purchased ${order.course_title}!`);
+        // Demo mode — no Razorpay keys configured
+        await axios.post(`${API}/payments/verify`, {
+          razorpay_order_id: order.order_id,
+          razorpay_payment_id: `pay_demo_${Date.now()}`,
+          razorpay_signature: "",
+        }, { withCredentials: true });
+        toast.success(`Successfully purchased ${order.course?.title || course.title}!`);
         fetchPurchases();
         navigate(`/upsell/${course.course_id}`);
       }

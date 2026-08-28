@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, update, delete, and_, or_, desc
 from sqlalchemy.orm import selectinload
 import os, logging, httpx, uuid, hashlib, hmac, random, asyncio, json, shutil, mimetypes
+import razorpay
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
@@ -48,9 +49,14 @@ COMMISSION_LEVELS = {
 MIN_WITHDRAWAL = 100
 ADMIN_EMAILS = [e.strip() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()]
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://meramentor.in")
-STORAGE_MODE = os.environ.get("STORAGE_MODE", "mock")
-UPLOAD_DIR = ROOT_DIR / "uploads"
-UPLOAD_DIR.mkdir(exist_ok=True)
+
+# Razorpay
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "")
+razorpay_client = None
+if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET:
+    razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 # TDS Configuration
 TDS_RATE = 0.10
@@ -1194,19 +1200,19 @@ async def get_streaks(user: dict = Depends(get_current_user), db: AsyncSession =
 
 @api_router.post("/payments/create-order")
 async def create_payment_order(request: Request, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """Create payment order (mock Razorpay)"""
+    """Create Razorpay payment order"""
     body = await request.json()
     course_id = body.get("course_id")
     coupon_code = body.get("coupon_code")
-    
+
     # Get course
     stmt = select(Course).where(Course.course_id == course_id)
     result = await db.execute(stmt)
     course = result.scalar_one_or_none()
-    
+
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
-    
+
     # Check if already purchased
     stmt = select(Purchase).where(
         Purchase.user_id == user["user_id"],
@@ -1215,35 +1221,66 @@ async def create_payment_order(request: Request, user: dict = Depends(get_curren
     )
     result = await db.execute(stmt)
     existing = result.scalar_one_or_none()
-    
+
     if existing:
         raise HTTPException(status_code=400, detail="Already purchased")
-    
-    # Calculate amount
+
+    # Calculate amount with coupon
     amount = course.price
     discount = 0
-    
+
     if coupon_code:
-        stmt = select(Coupon).where(
-            Coupon.code == coupon_code,
-            Coupon.active == True
-        )
+        stmt = select(Coupon).where(Coupon.code == coupon_code, Coupon.active == True)
         result = await db.execute(stmt)
         coupon = result.scalar_one_or_none()
-        
         if coupon:
             if coupon.discount_type == "percentage":
                 discount = round(amount * coupon.discount_value / 100, 2)
             else:
                 discount = coupon.discount_value
             amount = max(0, amount - discount)
-    
-    # Create order (mock)
-    order_id = f"order_{uuid.uuid4().hex[:16]}"
-    
-    # Create pending purchase
+
+    # Re-use existing PENDING order for this user+course (handles double-click / retries)
+    stmt = select(Purchase).where(
+        Purchase.user_id == user["user_id"],
+        Purchase.course_id == course.id,
+        Purchase.status == PurchaseStatus.PENDING.value,
+    )
+    result = await db.execute(stmt)
+    pending = result.scalar_one_or_none()
+
+    if pending and pending.razorpay_order_id:
+        return {
+            "order_id": pending.razorpay_order_id,
+            "amount": pending.amount,
+            "amount_paise": int(pending.amount * 100),
+            "currency": "INR",
+            "key_id": RAZORPAY_KEY_ID,
+            "course": {"title": course.title, "image": course.image},
+        }
+
+    # Create Razorpay order (amount in paise)
+    amount_paise = int(amount * 100)
+    receipt = f"pur_{uuid.uuid4().hex[:16]}"  # max 40 chars
+
+    if razorpay_client:
+        try:
+            rz_order = razorpay_client.order.create({
+                "amount": amount_paise,
+                "currency": "INR",
+                "receipt": receipt,
+                "payment_capture": 1,
+            })
+            order_id = rz_order["id"]
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Razorpay error: {str(e)}")
+    else:
+        # Demo mode — no real keys configured
+        order_id = f"order_{uuid.uuid4().hex[:16]}"
+
+    # Save pending purchase
     purchase = Purchase(
-        purchase_id=f"pur_{uuid.uuid4().hex[:12]}",
+        purchase_id=receipt,
         user_id=user["user_id"],
         course_id=course.id,
         amount=amount,
@@ -1255,11 +1292,13 @@ async def create_payment_order(request: Request, user: dict = Depends(get_curren
     )
     db.add(purchase)
     await db.commit()
-    
+
     return {
         "order_id": order_id,
         "amount": amount,
+        "amount_paise": amount_paise,
         "currency": "INR",
+        "key_id": RAZORPAY_KEY_ID,
         "course": {
             "title": course.title,
             "image": course.image,
@@ -1268,53 +1307,122 @@ async def create_payment_order(request: Request, user: dict = Depends(get_curren
 
 @api_router.post("/payments/verify")
 async def verify_payment(request: Request, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """Verify and complete payment (mock)"""
+    """Verify Razorpay payment signature and complete purchase"""
     body = await request.json()
-    order_id = body.get("razorpay_order_id")
-    payment_id = body.get("razorpay_payment_id", f"pay_{uuid.uuid4().hex[:16]}")
-    
+    order_id   = body.get("razorpay_order_id")
+    payment_id = body.get("razorpay_payment_id", "")
+    signature  = body.get("razorpay_signature", "")
+
     # Find purchase
     stmt = select(Purchase).where(Purchase.razorpay_order_id == order_id)
     result = await db.execute(stmt)
     purchase = result.scalar_one_or_none()
-    
+
     if not purchase:
         raise HTTPException(status_code=404, detail="Order not found")
-    
+
     if purchase.status == PurchaseStatus.COMPLETED.value:
         return {"message": "Already completed", "purchase_id": purchase.purchase_id}
-    
-    # Mark as completed
+
+    # Signature verification (only when real keys are configured)
+    if razorpay_client and signature:
+        try:
+            razorpay_client.utility.verify_payment_signature({
+                "razorpay_order_id": order_id,
+                "razorpay_payment_id": payment_id,
+                "razorpay_signature": signature,
+            })
+        except razorpay.errors.SignatureVerificationError:
+            raise HTTPException(status_code=400, detail="Invalid payment signature")
+
+    # Mark completed
     purchase.status = PurchaseStatus.COMPLETED.value
     purchase.razorpay_payment_id = payment_id
     purchase.completed_at = datetime.now(timezone.utc)
-    
+
     # Get course
     stmt = select(Course).where(Course.id == purchase.course_id)
     result = await db.execute(stmt)
     course = result.scalar_one_or_none()
-    
+
     # Process commissions
     if course:
         await process_commissions(db, str(purchase.id), user["user_id"], purchase.amount, course.title)
-    
+
     # Award XP
-    await add_xp(db, user["user_id"], 50, f"Purchased course")
-    
+    await add_xp(db, user["user_id"], 50, "Purchased course")
+
     await db.commit()
-    
-    # Add notification
+
     await add_notification(
         db, user["user_id"], "Purchase Complete!",
         f"You now have access to {course.title if course else 'the course'}",
         "purchase"
     )
-    
+
     return {
         "message": "Payment successful!",
         "purchase_id": purchase.purchase_id,
         "course_id": course.course_id if course else None,
     }
+
+@api_router.post("/payments/webhook")
+async def razorpay_webhook(request: Request, db: AsyncSession = Depends(get_db)):
+    """Razorpay webhook handler with signature verification"""
+    payload = await request.body()
+    signature = request.headers.get("X-Razorpay-Signature", "")
+
+    if RAZORPAY_WEBHOOK_SECRET and signature:
+        try:
+            razorpay_client.utility.verify_webhook_signature(
+                payload.decode(), signature, RAZORPAY_WEBHOOK_SECRET
+            )
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid webhook signature")
+
+    try:
+        event = json.loads(payload)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid payload")
+
+    event_type = event.get("event", "")
+
+    if event_type == "payment.captured":
+        payment = event.get("payload", {}).get("payment", {}).get("entity", {})
+        order_id = payment.get("order_id")
+        payment_id = payment.get("id")
+
+        if order_id:
+            stmt = select(Purchase).where(Purchase.razorpay_order_id == order_id)
+            result = await db.execute(stmt)
+            purchase = result.scalar_one_or_none()
+
+            if purchase and purchase.status != PurchaseStatus.COMPLETED.value:
+                purchase.status = PurchaseStatus.COMPLETED.value
+                purchase.razorpay_payment_id = payment_id
+                purchase.completed_at = datetime.now(timezone.utc)
+
+                stmt = select(Course).where(Course.id == purchase.course_id)
+                result = await db.execute(stmt)
+                course = result.scalar_one_or_none()
+
+                if course:
+                    await process_commissions(db, str(purchase.id), purchase.user_id, purchase.amount, course.title)
+
+                await db.commit()
+
+    elif event_type == "payment.failed":
+        payment = event.get("payload", {}).get("payment", {}).get("entity", {})
+        order_id = payment.get("order_id")
+        if order_id:
+            stmt = select(Purchase).where(Purchase.razorpay_order_id == order_id)
+            result = await db.execute(stmt)
+            purchase = result.scalar_one_or_none()
+            if purchase and purchase.status == PurchaseStatus.PENDING.value:
+                purchase.status = PurchaseStatus.FAILED.value
+                await db.commit()
+
+    return {"status": "ok"}
 
 # ========== Admin Routes ==========
 
@@ -1475,6 +1583,8 @@ ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/x-msvideo", "video
 ALLOWED_PDF_TYPES = ["application/pdf"]
 ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 
+from services.storage_service import upload_file as storage_upload, download_file as storage_download, init_storage
+
 @api_router.post("/admin/media/upload")
 async def upload_media(
     file: UploadFile = File(...),
@@ -1484,55 +1594,44 @@ async def upload_media(
     admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Upload media file"""
+    """Upload media file to Emergent object storage"""
     content_type = file.content_type or ""
-    
-    # Validate
+
+    # Validate type
     if upload_type == "video" and content_type not in ALLOWED_VIDEO_TYPES:
         raise HTTPException(status_code=400, detail="Invalid video type")
     elif upload_type == "pdf" and content_type not in ALLOWED_PDF_TYPES:
         raise HTTPException(status_code=400, detail="Only PDF files allowed")
     elif upload_type == "image" and content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(status_code=400, detail="Invalid image type")
-    
-    # Generate file key
-    ext_map = {
-        "video/mp4": ".mp4", "video/quicktime": ".mov", "video/x-msvideo": ".avi",
-        "application/pdf": ".pdf", "image/jpeg": ".jpg", "image/png": ".png"
-    }
-    ext = ext_map.get(content_type, "")
-    file_key = f"{upload_type}s/{uuid.uuid4().hex}{ext}"
-    
-    # Save file (mock storage)
-    file_path = UPLOAD_DIR / file_key
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    content = await file.read()
-    with open(file_path, "wb") as f:
-        f.write(content)
-    
-    file_size = len(content)
-    
-    # Store in database
+
+    file_content = await file.read()
+    file_size = len(file_content)
+
+    # Upload to Emergent object storage
+    storage_path = await storage_upload(file_content, upload_type, file.filename, content_type)
+
+    # Store reference in database
     media = Media(
         media_id=f"media_{uuid.uuid4().hex[:12]}",
-        file_key=file_key,
+        file_key=storage_path,
         file_name=file.filename,
         file_type=upload_type,
         content_type=content_type,
         file_size=file_size,
-        storage_mode=STORAGE_MODE,
+        storage_mode="emergent",
         uploaded_by=admin["user_id"],
     )
     db.add(media)
     await db.commit()
-    
+
     return {
         "media_id": media.media_id,
-        "file_key": file_key,
+        "file_key": storage_path,
         "file_name": file.filename,
         "file_type": upload_type,
         "file_size": file_size,
-        "url": f"/api/media/files/{file_key}",
+        "url": f"/api/media/files/{storage_path}",
         "status": "ready",
     }
 
@@ -1547,10 +1646,10 @@ async def list_media(
     if upload_type:
         stmt = stmt.where(Media.file_type == upload_type)
     stmt = stmt.order_by(Media.created_at.desc()).limit(100)
-    
+
     result = await db.execute(stmt)
     media_list = result.scalars().all()
-    
+
     return [
         {
             "media_id": m.media_id,
@@ -1567,33 +1666,29 @@ async def list_media(
 
 @api_router.delete("/admin/media/{media_id}")
 async def delete_media(media_id: str, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
-    """Delete media file"""
+    """Soft-delete media record (object storage has no delete API)"""
     stmt = select(Media).where(Media.media_id == media_id)
     result = await db.execute(stmt)
     media = result.scalar_one_or_none()
-    
+
     if not media:
         raise HTTPException(status_code=404, detail="Media not found")
-    
-    # Delete file
-    file_path = UPLOAD_DIR / media.file_key
-    if file_path.exists():
-        file_path.unlink()
-    
+
     await db.delete(media)
     await db.commit()
-    
+
     return {"message": "Media deleted"}
 
 @api_router.get("/media/files/{file_key:path}")
 async def serve_media_file(file_key: str):
-    """Serve media file"""
-    file_path = UPLOAD_DIR / file_key
-    if not file_path.exists():
+    """Proxy media file from Emergent object storage"""
+    try:
+        data, ct = await storage_download(file_key)
+        return Response(content=data, media_type=ct)
+    except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
-    
-    content_type, _ = mimetypes.guess_type(str(file_path))
-    return FileResponse(file_path, media_type=content_type or "application/octet-stream")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Storage error: {str(e)}")
 
 # ========== Health Check ==========
 
@@ -1611,7 +1706,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         "status": "ok",
         "timestamp": now_iso(),
         "database": db_status,
-        "storage_mode": STORAGE_MODE,
+        "storage_mode": "emergent",
         "version": "2.0.0",
         "commission_levels": len(COMMISSION_LEVELS),
         "total_commission_rate": sum(COMMISSION_LEVELS.values()) * 100,
@@ -1625,8 +1720,13 @@ app.include_router(api_router)
 
 @app.on_event("startup")
 async def startup():
-    """Initialize database on startup"""
+    """Initialize database and storage on startup"""
     await init_db()
+    try:
+        init_storage()
+        print("✅ Emergent object storage initialized")
+    except Exception as e:
+        print(f"⚠️  Storage init warning: {e}")
     print("✅ Mera Mentor API started with PostgreSQL")
 
 @app.on_event("shutdown")

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="21" time="108.953" timestamp="2026-08-28T17:40:55.959481+00:00" hostname="agent-env-69c4b9e5-507d-4c6f-aa04-c2bf1e20ee61"><testcase classname="backend.tests.test_razorpay_payments.TestHealthCheck" name="test_health_returns_200" time="7.709" /><testcase classname="backend.tests.test_razorpay_payments.TestHealthCheck" name="test_health_database_connected" time="2.616" /><testcase classname="backend.tests.test_razorpay_payments.TestHealthCheck" name="test_health_storage_mode_emergent" time="2.750" /><testcase classname="backend.tests.test_razorpay_payments.TestHealthCheck" name="test_health_status_ok" time="2.647" /><testcase classname="backend.tests.test_razorpay_payments.TestCreatePaymentOrder" name="test_create_order_returns_200" time="17.547" /><testcase classname="backend.tests.test_razorpay_payments.TestCreatePaymentOrder" name="test_create_order_has_real_razorpay_order_id" time="4.916"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_razorpay_payments.py:111: in test_create_order_has_real_razorpay_order_id
+    data = resp.json()
+           ^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_razorpay_payments.TestCreatePaymentOrder" name="test_create_order_amount_paise" time="5.014"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_razorpay_payments.py:122: in test_create_order_amount_paise
+    data = resp.json()
+           ^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_razorpay_payments.TestCreatePaymentOrder" name="test_create_order_key_id_correct" time="5.032"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_razorpay_payments.py:132: in test_create_order_key_id_correct
+    data = resp.json()
+           ^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_razorpay_payments.TestCreatePaymentOrder" name="test_create_order_currency_inr" time="4.858"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_razorpay_payments.py:142: in test_create_order_currency_inr
+    data = resp.json()
+           ^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_razorpay_payments.TestCreatePaymentOrder" name="test_create_order_course_info_present" time="4.970"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_razorpay_payments.py:151: in test_create_order_course_info_present
+    data = resp.json()
+           ^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_razorpay_payments.TestCreatePaymentOrder" name="test_create_order_requires_auth" time="0.275" /><testcase classname="backend.tests.test_razorpay_payments.TestCreatePaymentOrder" name="test_create_order_nonexistent_course_404" time="3.733" /><testcase classname="backend.tests.test_razorpay_payments.TestCreatePaymentOrder" name="test_create_order_with_coupon" time="10.694" /><testcase classname="backend.tests.test_razorpay_payments.TestVerifyPayment" name="test_verify_returns_200" time="22.797" /><testcase classname="backend.tests.test_razorpay_payments.TestVerifyPayment" name="test_verify_response_has_purchase_id" time="3.517" /><testcase classname="backend.tests.test_razorpay_payments.TestVerifyPayment" name="test_verify_unknown_order_returns_404" time="3.748" /><testcase classname="backend.tests.test_razorpay_payments.TestVerifyPayment" name="test_verify_requires_auth" time="0.224" /><testcase classname="backend.tests.test_razorpay_payments.TestWebhook" name="test_webhook_post_returns_200" time="2.748" /><testcase classname="backend.tests.test_razorpay_payments.TestWebhook" name="test_webhook_returns_status_ok" time="0.070" /><testcase classname="backend.tests.test_razorpay_payments.TestWebhook" name="test_webhook_payment_failed_event" time="2.658" /><testcase classname="backend.tests.test_razorpay_payments.TestWebhook" name="test_webhook_invalid_json_returns_400" time="0.236" /></testsuite></testsuites>

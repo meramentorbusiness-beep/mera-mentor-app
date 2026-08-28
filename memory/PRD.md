@@ -116,10 +116,11 @@ ADMIN_EMAILS=admin@meramentor.in
 - `POST/PUT/DELETE /api/admin/courses` - Course CRUD
 - `POST /api/admin/media/upload` - Media upload
 
-## MOCKED Systems (Add Keys to Enable)
-- **Razorpay**: Payment gateway
-- **Resend**: Email notifications
-- **Cloudflare R2**: Cloud storage
+## Integrated Systems
+- **Razorpay**: ✅ LIVE (rzp_test_SKU3kjkJnpAHOF) — real order creation + signature verification + webhook
+- **Emergent Object Storage**: ✅ LIVE — replacing local disk storage for media uploads
+- **Resend**: ⏳ Ready (needs RESEND_API_KEY)
+- **Cloudflare R2**: Replaced by Emergent Object Storage
 
 ## Seed Data in PostgreSQL
 - 2 users (admin@meramentor.in, test@meramentor.in)
@@ -139,8 +140,8 @@ vercel --prod
 ```
 
 ## Next Steps to Launch
-1. Add Razorpay keys for real payments
+1. ~~Add Razorpay keys for real payments~~ ✅ DONE
 2. Add Resend API key for emails
-3. Add Cloudflare R2 for cloud storage
-4. Deploy to production
-5. Launch meramentor.in 🚀
+3. Deploy to production
+4. Add RAZORPAY_WEBHOOK_SECRET after pointing webhook URL in Razorpay dashboard
+5. Switch to live keys (`rzp_live_...`) when ready
