@@ -1,13 +1,15 @@
-# Emergent Object Storage Service for Mera Mentor
+# Cloudflare R2 object storage client for Mera Mentor.
+# Uses the S3-compatible R2 API via boto3. Files are stored privately;
+# access is gated by the FastAPI layer.
+import asyncio
 import os
 import uuid
-import requests
-from typing import Optional
+from functools import lru_cache
+from typing import Tuple
 
-# Configuration
-EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
-_STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
-STORAGE_URL = _STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
+import boto3
+from botocore.client import Config
+
 APP_NAME = "mera-mentor"
 
 # File type config
@@ -19,65 +21,52 @@ ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/x-msvideo", "video
 ALLOWED_PDF_TYPES   = ["application/pdf"]
 ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 
-_storage_key: Optional[str] = None
+_R2_ENV_VARS = (
+    "CLOUDFLARE_R2_ACCOUNT_ID",
+    "CLOUDFLARE_R2_ACCESS_KEY_ID",
+    "CLOUDFLARE_R2_SECRET_ACCESS_KEY",
+    "CLOUDFLARE_R2_BUCKET_NAME",
+)
 
 
-def init_storage(force: bool = False) -> str:
-    """Initialise storage once at startup; reuse the key every request."""
-    global _storage_key
-    if _storage_key and not force:
-        return _storage_key
-    resp = requests.post(
-        f"{STORAGE_URL}/init",
-        json={"emergent_key": EMERGENT_KEY},
-        timeout=30,
-    )
-    resp.raise_for_status()
-    _storage_key = resp.json()["storage_key"]
-    return _storage_key
+def is_storage_enabled() -> bool:
+    """True only when all R2 settings are present."""
+    return all(os.environ.get(name) for name in _R2_ENV_VARS)
 
 
-def put_object(path: str, data: bytes, content_type: str) -> dict:
-    """Upload bytes to object storage. Returns {"path": ..., "size": ..., "etag": ...}"""
-    key = init_storage()
-    resp = requests.put(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key, "Content-Type": content_type},
-        data=data,
-        timeout=120,
-    )
-    if resp.status_code == 404:
-        # Storage key went stale — reinit and retry once
-        key = init_storage(force=True)
-        resp = requests.put(
-            f"{STORAGE_URL}/objects/{path}",
-            headers={"X-Storage-Key": key, "Content-Type": content_type},
-            data=data,
-            timeout=120,
+@lru_cache(maxsize=1)
+def _client():
+    if not is_storage_enabled():
+        raise RuntimeError(
+            "Cloudflare R2 is not configured. Set CLOUDFLARE_R2_ACCOUNT_ID, "
+            "CLOUDFLARE_R2_ACCESS_KEY_ID, CLOUDFLARE_R2_SECRET_ACCESS_KEY, "
+            "and CLOUDFLARE_R2_BUCKET_NAME."
         )
-    resp.raise_for_status()
-    return resp.json()
-
-
-def get_object(path: str) -> tuple:
-    """Download bytes from object storage. Returns (bytes, content_type)."""
-    key = init_storage()
-    resp = requests.get(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key},
-        timeout=60,
+    account_id = os.environ["CLOUDFLARE_R2_ACCOUNT_ID"]
+    return boto3.client(
+        "s3",
+        endpoint_url=f"https://{account_id}.r2.cloudflarestorage.com",
+        aws_access_key_id=os.environ["CLOUDFLARE_R2_ACCESS_KEY_ID"],
+        aws_secret_access_key=os.environ["CLOUDFLARE_R2_SECRET_ACCESS_KEY"],
+        region_name="auto",  # R2 does not use standard AWS regions
+        config=Config(
+            signature_version="s3v4",
+            s3={"addressing_style": "path"},
+            retries={"mode": "standard", "max_attempts": 3},
+        ),
     )
-    if resp.status_code == 404 and "storage_key" not in resp.text.lower():
-        raise FileNotFoundError(f"Object not found: {path}")
-    if resp.status_code == 404:
-        key = init_storage(force=True)
-        resp = requests.get(
-            f"{STORAGE_URL}/objects/{path}",
-            headers={"X-Storage-Key": key},
-            timeout=60,
-        )
-    resp.raise_for_status()
-    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
+
+def _bucket() -> str:
+    return os.environ["CLOUDFLARE_R2_BUCKET_NAME"]
+
+
+def init_storage() -> None:
+    """Validate R2 connectivity on startup. No-op if R2 is not configured."""
+    if not is_storage_enabled():
+        return
+    # head_bucket verifies credentials and bucket existence without listing objects.
+    _client().head_bucket(Bucket=_bucket())
 
 
 def validate_file_type(content_type: str, upload_type: str) -> tuple:
@@ -106,31 +95,64 @@ def validate_file_size(file_size: int, upload_type: str) -> tuple:
 
 
 def generate_storage_path(upload_type: str, filename: str) -> str:
-    """Generate a unique, collision-safe storage path."""
-    ext_map = {
-        "video/mp4": ".mp4", "video/quicktime": ".mov",
-        "video/x-msvideo": ".avi", "video/webm": ".webm",
-        "application/pdf": ".pdf", "image/jpeg": ".jpg",
-        "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif",
-    }
+    """Generate a unique, collision-safe storage key."""
     ext = ""
     if "." in filename:
-        ext = "." + filename.rsplit(".", 1)[-1].lower()
+        ext = "." + filename.rsplit(".", 1)[-1].lower()[:20]
     uid = uuid.uuid4().hex
     return f"{APP_NAME}/{upload_type}s/{uid}{ext}"
 
 
 async def upload_file(file_content: bytes, upload_type: str, filename: str, content_type: str) -> str:
-    """Upload a file and return its storage path."""
-    path = generate_storage_path(upload_type, filename)
-    result = put_object(path, file_content, content_type)
-    return result["path"]
+    """Upload a file to R2 and return its storage key."""
+    if not is_storage_enabled():
+        raise RuntimeError("Object storage is not configured")
+    key = generate_storage_path(upload_type, filename)
+
+    def _put() -> None:
+        _client().put_object(
+            Bucket=_bucket(),
+            Key=key,
+            Body=file_content,
+            ContentType=content_type or "application/octet-stream",
+        )
+
+    await asyncio.to_thread(_put)
+    return key
 
 
-async def download_file(storage_path: str) -> tuple:
-    """Download a file by its storage path. Returns (bytes, content_type)."""
-    return get_object(storage_path)
+async def download_file(storage_path: str) -> Tuple[bytes, str]:
+    """Download a file from R2 by its key. Returns (bytes, content_type)."""
+    if not is_storage_enabled():
+        raise RuntimeError("Object storage is not configured")
+    if not storage_path or storage_path.startswith(("/", "http://", "https://")):
+        raise ValueError("Invalid storage key")
+
+    def _get() -> Tuple[bytes, str]:
+        try:
+            resp = _client().get_object(Bucket=_bucket(), Key=storage_path)
+        except _client().exceptions.NoSuchKey:
+            raise FileNotFoundError(f"Object not found: {storage_path}")
+        try:
+            data = resp["Body"].read()
+            ct = resp.get("ContentType") or "application/octet-stream"
+            return data, ct
+        finally:
+            resp["Body"].close()
+
+    return await asyncio.to_thread(_get)
 
 
-def is_storage_enabled() -> bool:
-    return bool(EMERGENT_KEY)
+async def presigned_get_url(storage_path: str, expires_seconds: int = 1800) -> str:
+    """Generate a temporary GET URL for a stored object (default 30 min)."""
+    if not is_storage_enabled():
+        raise RuntimeError("Object storage is not configured")
+    if not (1 <= expires_seconds <= 604800):
+        raise ValueError("Expiry must be 1 second through 7 days")
+    return await asyncio.to_thread(
+        lambda: _client().generate_presigned_url(
+            "get_object",
+            Params={"Bucket": _bucket(), "Key": storage_path},
+            ExpiresIn=expires_seconds,
+        )
+    )

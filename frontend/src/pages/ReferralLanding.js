@@ -27,9 +27,7 @@ export default function ReferralLanding() {
 
   const handleJoin = () => {
     localStorage.setItem("referral_code", code);
-    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    const redirectUrl = window.location.origin + "/dashboard";
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    window.location.href = `${process.env.REACT_APP_BACKEND_URL}/api/auth/google/login?ref=${encodeURIComponent(code)}`;
   };
 
   const fmt = (v) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 0 }).format(v);

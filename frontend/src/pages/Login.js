@@ -16,9 +16,9 @@ export default function Login() {
   }, [user, navigate, location]);
 
   const handleGoogleLogin = () => {
-    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    const redirectUrl = window.location.origin + "/dashboard";
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    const ref = localStorage.getItem("referral_code");
+    const query = ref ? `?ref=${encodeURIComponent(ref)}` : "";
+    window.location.href = `${process.env.REACT_APP_BACKEND_URL}/api/auth/google/login${query}`;
   };
 
   return (

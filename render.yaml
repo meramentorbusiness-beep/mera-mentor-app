@@ -29,10 +29,24 @@ services:
         value: "3"
       - key: COMMISSION_L5
         value: "1"
-      - key: EMERGENT_LLM_KEY
+      # Google OAuth 2.0
+      - key: GOOGLE_CLIENT_ID
         sync: false
-      - key: INTEGRATION_PROXY_URL
-        value: "https://integrations.emergentagent.com"
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      # Cloudflare R2 Object Storage
+      - key: CLOUDFLARE_R2_ACCOUNT_ID
+        sync: false
+      - key: CLOUDFLARE_R2_ACCESS_KEY_ID
+        sync: false
+      - key: CLOUDFLARE_R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: CLOUDFLARE_R2_BUCKET_NAME
+        sync: false
       - key: FRONTEND_URL
         fromService:
           type: web

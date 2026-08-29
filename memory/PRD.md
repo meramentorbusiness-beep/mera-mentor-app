@@ -29,6 +29,32 @@ Build a Multi-Level Referral & Commission Dashboard for an online course platfor
 - Bumped Docker frontend build stage from `node:18-slim` → `node:20-slim` in `/app/Dockerfile` to satisfy `react-router-dom@7.x` engine requirement of `node >=20.0.0`.
 - Verified locally: `pip install -r requirements.txt` exit 0, `yarn install` exit 0 on Node 20.
 
+## Emergent Removal + Real Google OAuth + Cloudflare R2 (Aug 29, 2026)
+- **Removed all Emergent references** from application code, comments, env-var names, storage `mode` labels, and `render.yaml`. Only remaining `emergent` strings are `REACT_APP_BACKEND_URL` in `frontend/.env` (system-protected preview URL, overridden on Render).
+- **Replaced Emergent-brokered Google auth** with a real Google OAuth 2.0 Authorization Code + OIDC flow. New file `backend/routes/google_auth.py` exposes `GET /api/auth/google/login` and `GET /api/auth/google/callback`. Signed CSRF state carries the referral code through the Google round-trip. ID token verified via `google-auth` (audience + issuer + email_verified). Session cookie unchanged (`session_token`, httpOnly, Secure, SameSite=None, 30-day).
+- **Removed the broken `POST /api/auth/session`** endpoint (the frontend was sending `{session_id}` while the backend expected `{user: {...}}` — flow was end-to-end broken).
+- **Replaced Emergent Object Storage with Cloudflare R2** via boto3 S3-compatible client (`backend/services/storage_service.py`). Same public API (`upload_file`, `download_file`, `is_storage_enabled`), so upstream media routes did not change. `is_storage_enabled()` returns `False` and uploads short-circuit when R2 env vars are absent (currently the case in local dev). Added `presigned_get_url()` for future direct video streaming.
+- **Frontend**: `Login.js` and `ReferralLanding.js` now redirect to `${REACT_APP_BACKEND_URL}/api/auth/google/login?ref=<code>`. Removed the hash-based `AuthCallback` component from `App.js` (no longer needed; OAuth flow now uses a cookie-set redirect).
+- **Deps**: Added `itsdangerous==2.2.0` for signed OAuth state. `google-auth`, `boto3`, `httpx` already present.
+- Verified locally: backend starts clean, health returns `storage_mode: r2`, `/api/auth/google/login` returns clean 500 with "GOOGLE_CLIENT_ID is not set" until user sets env vars on Render, old `/api/auth/session` returns 404, frontend compiles without errors.
+
+### Env vars user must set on Render for Google OAuth to work:
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI` = `https://<render-app>.onrender.com/api/auth/google/callback`
+- `SESSION_SECRET` (random string, generate via `python -c "import secrets; print(secrets.token_urlsafe(64))"`)
+- `FRONTEND_URL` = `https://<render-app>.onrender.com` (already wired in render.yaml)
+
+### Env vars user must set on Render for R2 uploads:
+- `CLOUDFLARE_R2_ACCOUNT_ID`
+- `CLOUDFLARE_R2_ACCESS_KEY_ID`
+- `CLOUDFLARE_R2_SECRET_ACCESS_KEY`
+- `CLOUDFLARE_R2_BUCKET_NAME`
+
+### Google Cloud Console → Credentials → OAuth 2.0 Client (Web app):
+Authorized redirect URI (exact, no trailing slash): `https://<render-app>.onrender.com/api/auth/google/callback`
+
+
 
 ## Migration Completed (Feb 27, 2026)
 

@@ -182,89 +182,8 @@ async def process_commissions(db: AsyncSession, purchase_id: str, buyer_id: str,
     return commissions
 
 # ========== Auth Routes ==========
-
-@api_router.post("/auth/session")
-async def create_session(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
-    """Handle Google OAuth callback and create session"""
-    body = await request.json()
-    user_data = body.get("user", {})
-    ref_code = body.get("ref_code")
-    
-    email = user_data.get("email")
-    if not email:
-        raise HTTPException(status_code=400, detail="Email required")
-    
-    # Check if user exists
-    stmt = select(User).where(User.email == email)
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
-    
-    if not user:
-        # Build referral chain
-        referral_chain = []
-        referred_by_id = None
-        
-        if ref_code:
-            stmt = select(User).where(User.referral_code == ref_code)
-            result = await db.execute(stmt)
-            referrer = result.scalar_one_or_none()
-            if referrer:
-                referred_by_id = str(referrer.id)
-                referral_chain = [str(referrer.id)] + (referrer.referral_chain or [])[:4]
-        
-        # Create new user
-        user = User(
-            email=email,
-            name=user_data.get("name", email.split("@")[0]),
-            avatar=user_data.get("picture"),
-            google_id=user_data.get("sub"),
-            referral_code=generate_referral_code(),
-            referred_by_id=referred_by_id,
-            referral_chain=referral_chain,
-            role="admin" if email in ADMIN_EMAILS else "user",
-        )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-        
-        # Notify referrer
-        if referred_by_id:
-            await add_notification(
-                db, referred_by_id, "New Referral!",
-                f"{user.name} joined using your link!",
-                "referral"
-            )
-    
-    # Create session
-    session_token = hashlib.sha256(f"{user.id}{now_iso()}{random.random()}".encode()).hexdigest()
-    session = UserSession(
-        user_id=str(user.id),
-        session_token=session_token,
-        expires_at=datetime.now(timezone.utc) + timedelta(days=30),
-    )
-    db.add(session)
-    await db.commit()
-    
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        max_age=30 * 24 * 60 * 60,
-    )
-    
-    return {
-        "user": {
-            "user_id": str(user.id),
-            "email": user.email,
-            "name": user.name,
-            "picture": user.avatar,
-            "referral_code": user.referral_code,
-            "is_admin": user.email in ADMIN_EMAILS,
-        },
-        "session_token": session_token,
-    }
+# Google OAuth login/callback are in routes/google_auth.py.
+# `/api/auth/me` and `/api/auth/logout` live here.
 
 @api_router.get("/auth/me")
 async def get_me(user: dict = Depends(get_current_user)):
@@ -1595,7 +1514,7 @@ async def upload_media(
     admin: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Upload media file to Emergent object storage"""
+    """Upload media file to cloud object storage"""
     content_type = file.content_type or ""
 
     # Validate type
@@ -1609,7 +1528,7 @@ async def upload_media(
     file_content = await file.read()
     file_size = len(file_content)
 
-    # Upload to Emergent object storage
+    # Upload to cloud object storage
     storage_path = await storage_upload(file_content, upload_type, file.filename, content_type)
 
     # Store reference in database
@@ -1620,7 +1539,7 @@ async def upload_media(
         file_type=upload_type,
         content_type=content_type,
         file_size=file_size,
-        storage_mode="emergent",
+        storage_mode="r2",
         uploaded_by=admin["user_id"],
     )
     db.add(media)
@@ -1682,7 +1601,7 @@ async def delete_media(media_id: str, admin: dict = Depends(require_admin), db: 
 
 @api_router.get("/media/files/{file_key:path}")
 async def serve_media_file(file_key: str):
-    """Proxy media file from Emergent object storage"""
+    """Proxy media file from cloud object storage"""
     try:
         data, ct = await storage_download(file_key)
         return Response(content=data, media_type=ct)
@@ -1707,7 +1626,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         "status": "ok",
         "timestamp": now_iso(),
         "database": db_status,
-        "storage_mode": "emergent",
+        "storage_mode": "r2",
         "version": "2.0.0",
         "commission_levels": len(COMMISSION_LEVELS),
         "total_commission_rate": sum(COMMISSION_LEVELS.values()) * 100,
@@ -1716,6 +1635,9 @@ async def health_check(db: AsyncSession = Depends(get_db)):
 # ========== Include Router ==========
 
 app.include_router(api_router)
+# Google OAuth 2.0 (real Google Cloud credentials, no third-party broker)
+from routes.google_auth import router as google_auth_router
+app.include_router(google_auth_router)
 
 # ========== Serve React Frontend (production) ==========
 
@@ -1743,7 +1665,11 @@ async def startup():
     await init_db()
     try:
         init_storage()
-        print("✅ Emergent object storage initialized")
+        from services.storage_service import is_storage_enabled
+        if is_storage_enabled():
+            print("✅ Cloudflare R2 object storage initialized")
+        else:
+            print("ℹ️  Object storage not configured (uploads disabled)")
     except Exception as e:
         print(f"⚠️  Storage init warning: {e}")
     print("✅ Mera Mentor API started with PostgreSQL")

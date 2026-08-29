@@ -49,6 +49,7 @@ idna==3.11
 importlib_metadata==8.7.1
 iniconfig==2.3.0
 isort==7.0.0
+itsdangerous==2.2.0
 Jinja2==3.1.6
 jiter==0.13.0
 jmespath==1.1.0

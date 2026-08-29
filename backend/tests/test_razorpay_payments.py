@@ -77,11 +77,11 @@ class TestHealthCheck:
             f"Expected database='connected', got: {data.get('database')}"
         print(f"\nHEALTH database: {data.get('database')}")
 
-    def test_health_storage_mode_emergent(self, session):
+    def test_health_storage_mode_r2(self, session):
         resp = session.get(f"{BASE_URL}/api/health")
         data = resp.json()
-        assert data.get("storage_mode") == "emergent", \
-            f"Expected storage_mode='emergent', got: {data.get('storage_mode')}"
+        assert data.get("storage_mode") == "r2", \
+            f"Expected storage_mode='r2', got: {data.get('storage_mode')}"
         print(f"\nHEALTH storage_mode: {data.get('storage_mode')}")
 
     def test_health_status_ok(self, session):

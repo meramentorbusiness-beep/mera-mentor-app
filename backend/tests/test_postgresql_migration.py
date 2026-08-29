@@ -12,7 +12,7 @@ import uuid
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://mentor-marketplace-5.preview.emergentagent.com"
+    BASE_URL = os.environ.get("TEST_BASE_URL", "http://localhost:8001")
 
 # Test session tokens (created dynamically)
 TEST_USER_SESSION = None
