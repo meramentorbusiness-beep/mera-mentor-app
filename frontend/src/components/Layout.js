@@ -12,9 +12,9 @@ const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/courses", label: "Courses", icon: BookOpen },
   { path: "/referrals", label: "Referrals", icon: Users },
-  { path: "/network", label: "Network", icon: GitBranch },
+  // { path: "/network", label: "Network", icon: GitBranch },       // HIDDEN — uncomment to bring back
   { path: "/wallet", label: "Wallet", icon: Wallet },
-  { path: "/leaderboard", label: "Leaderboard", icon: Trophy },
+  // { path: "/leaderboard", label: "Leaderboard", icon: Trophy },  // HIDDEN — uncomment to bring back
 ];
 
 export default function Layout() {

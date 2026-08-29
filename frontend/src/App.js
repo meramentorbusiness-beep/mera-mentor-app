@@ -45,8 +45,8 @@ function AppRouter() {
         <Route path="courses" element={<Courses />} />
         <Route path="courses/:courseId" element={<CourseDetail />} />
         <Route path="upsell/:courseId" element={<Upsell />} />
-        <Route path="leaderboard" element={<Leaderboard />} />
-        <Route path="network" element={<ReferralTree />} />
+        {/* <Route path="leaderboard" element={<Leaderboard />} />  HIDDEN — uncomment to bring back */}
+        {/* <Route path="network" element={<ReferralTree />} />     HIDDEN — uncomment to bring back */}
         <Route path="admin/courses" element={<AdminCourses />} />
       </Route>
     </Routes>
