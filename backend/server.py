@@ -201,6 +201,31 @@ async def logout(request: Request, response: Response, db: AsyncSession = Depend
 
 # ========== Courses Routes ==========
 
+@api_router.get("/purchases")
+async def get_my_purchases(user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Return the current user's purchases (course_id is the public string ID)."""
+    stmt = (
+        select(Purchase, Course.course_id)
+        .join(Course, Course.id == Purchase.course_id)
+        .where(
+            Purchase.user_id == user["user_id"],
+            Purchase.status == PurchaseStatus.COMPLETED.value,
+        )
+        .order_by(Purchase.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+    return [
+        {
+            "purchase_id": p.purchase_id,
+            "course_id": course_id_str,
+            "amount": p.amount,
+            "status": p.status,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+        }
+        for p, course_id_str in rows
+    ]
+
 @api_router.get("/courses")
 async def get_courses(db: AsyncSession = Depends(get_db)):
     """Get all published courses"""

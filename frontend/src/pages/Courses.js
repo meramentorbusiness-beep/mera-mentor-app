@@ -21,7 +21,10 @@ export default function Courses() {
     try { const res = await axios.get(`${API}/courses`); setCourses(res.data.filter((c) => !c.is_upsell)); } catch (e) { console.error(e); }
   };
   const fetchPurchases = async () => {
-    try { const res = await axios.get(`${API}/purchases`, { withCredentials: true }); setPurchases(res.data); } catch (e) { console.error(e); }
+    try {
+      const res = await axios.get(`${API}/purchases`, { withCredentials: true });
+      setPurchases(Array.isArray(res.data) ? res.data : []);
+    } catch (e) { console.error(e); setPurchases([]); }
   };
 
   const isPurchased = (courseId) => purchases.some((p) => p.course_id === courseId);
