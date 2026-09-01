@@ -1528,7 +1528,7 @@ ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/x-msvideo", "video
 ALLOWED_PDF_TYPES = ["application/pdf"]
 ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 
-from services.storage_service import upload_file as storage_upload, download_file as storage_download, init_storage
+from services.storage_service import upload_file as storage_upload, download_file as storage_download, init_storage, is_storage_enabled
 
 @api_router.post("/admin/media/upload")
 async def upload_media(
@@ -1540,6 +1540,14 @@ async def upload_media(
     db: AsyncSession = Depends(get_db)
 ):
     """Upload media file to cloud object storage"""
+    if not is_storage_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Cloudflare R2 is not configured. Set CLOUDFLARE_R2_ACCOUNT_ID, "
+                   "CLOUDFLARE_R2_ACCESS_KEY_ID, CLOUDFLARE_R2_SECRET_ACCESS_KEY, "
+                   "and CLOUDFLARE_R2_BUCKET_NAME in the environment.",
+        )
+
     content_type = file.content_type or ""
 
     # Validate type
@@ -1554,7 +1562,12 @@ async def upload_media(
     file_size = len(file_content)
 
     # Upload to cloud object storage
-    storage_path = await storage_upload(file_content, upload_type, file.filename, content_type)
+    try:
+        storage_path = await storage_upload(file_content, upload_type, file.filename, content_type)
+    except Exception as e:
+        # Log the real error; return a clean message to the client.
+        logging.exception("R2 upload failed")
+        raise HTTPException(status_code=502, detail=f"Storage upload failed: {type(e).__name__}")
 
     # Store reference in database
     media = Media(

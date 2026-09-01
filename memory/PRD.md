@@ -29,6 +29,13 @@ Build a Multi-Level Referral & Commission Dashboard for an online course platfor
 - Bumped Docker frontend build stage from `node:18-slim` → `node:20-slim` in `/app/Dockerfile` to satisfy `react-router-dom@7.x` engine requirement of `node >=20.0.0`.
 - Verified locally: `pip install -r requirements.txt` exit 0, `yarn install` exit 0 on Node 20.
 
+## Deploy-blocker + R2 upload hardening (Sep 2, 2026)
+- **Render build failure** — `lucide-react` was `^0.507.0`; without a shipped `yarn.lock`, Render's fresh install resolved to a newer version where the `Eye` icon export path had shifted, causing CRA build to fail. Pinned to exact `0.507.0` in `frontend/package.json`. Verified with `CI=true DISABLE_ESLINT_PLUGIN=true yarn build` (Render's exact flags) → Compiled successfully.
+- **`/api/admin/media/upload` 500** — the 500 the user saw was actually the previously-deployed OLD Emergent-storage code still running (since the build blocker prevented the new R2 code from deploying). Hardened the endpoint (server.py:1533) to short-circuit with **HTTP 503 + clear env-var list** when R2 isn't configured, and wraps the boto3 call in try/except returning **HTTP 502** with a clean error message on upload failure (real error logged server-side via `logging.exception`).
+- **`GET /api/purchases`** — added (was missing, causing `Courses.js .some()` crash). Returns current user's completed purchases with public `course_id` string.
+- Testing agent iteration 7 report: 10/10 backend tests passed, R2 client wiring verified via boto3 stubs, frontend production build verified.
+
+
 ## Emergent Removal + Real Google OAuth + Cloudflare R2 (Aug 29, 2026)
 - **Removed all Emergent references** from application code, comments, env-var names, storage `mode` labels, and `render.yaml`. Only remaining `emergent` strings are `REACT_APP_BACKEND_URL` in `frontend/.env` (system-protected preview URL, overridden on Render).
 - **Replaced Emergent-brokered Google auth** with a real Google OAuth 2.0 Authorization Code + OIDC flow. New file `backend/routes/google_auth.py` exposes `GET /api/auth/google/login` and `GET /api/auth/google/callback`. Signed CSRF state carries the referral code through the Google round-trip. ID token verified via `google-auth` (audience + issuer + email_verified). Session cookie unchanged (`session_token`, httpOnly, Secure, SameSite=None, 30-day).
