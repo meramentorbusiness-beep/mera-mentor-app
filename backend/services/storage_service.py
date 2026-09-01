@@ -10,8 +10,6 @@ from typing import Tuple
 import boto3
 from botocore.client import Config
 
-APP_NAME = "mera-mentor"
-
 # File type config
 MAX_VIDEO_SIZE = 500 * 1024 * 1024   # 500MB
 MAX_PDF_SIZE   = 50  * 1024 * 1024   # 50MB
@@ -95,12 +93,20 @@ def validate_file_size(file_size: int, upload_type: str) -> tuple:
 
 
 def generate_storage_path(upload_type: str, filename: str) -> str:
-    """Generate a unique, collision-safe storage key."""
+    """Generate a unique, collision-safe storage key.
+
+    Keys are stored at the bucket root under a per-type prefix — do NOT
+    include the bucket name, boto3 passes that separately via Bucket=.
+    Example outputs (upload_type -> key):
+      video  -> videos/<uuid>.mp4
+      pdf    -> pdfs/<uuid>.pdf
+      image  -> images/<uuid>.jpg
+    """
     ext = ""
     if "." in filename:
         ext = "." + filename.rsplit(".", 1)[-1].lower()[:20]
     uid = uuid.uuid4().hex
-    return f"{APP_NAME}/{upload_type}s/{uid}{ext}"
+    return f"{upload_type}s/{uid}{ext}"
 
 
 async def upload_file(file_content: bytes, upload_type: str, filename: str, content_type: str) -> str:
