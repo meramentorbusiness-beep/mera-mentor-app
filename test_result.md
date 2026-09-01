@@ -101,3 +101,87 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "PDF resources uploaded under courses are not visible in the UI (no view/download link), and when editing a course in admin panel the previously uploaded PDF resources appear empty."
+
+backend:
+  - task: "Update course saves resources"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Added resource handling to PUT /admin/courses/{course_id} - deletes old resources and creates new ones (same pattern as lessons). Cannot test locally - requires Supabase DATABASE_URL."
+
+  - task: "Lessons endpoint returns resources"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Added resources query and response to GET /courses/{course_id}/lessons. Resources get full URLs for users with access or free preview."
+
+  - task: "Course detail returns resource URLs"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Changed GET /courses/{course_id} to always return resource URLs (was previously only for free_preview). Needed for admin edit flow."
+
+frontend:
+  - task: "Admin edit fetches full course with resources"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/AdminCourses.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "openEdit now fetches GET /courses/{courseId} to populate resources and lessons before opening dialog. Maps url presence to media_id for uploaded state display."
+
+  - task: "Course detail has PDF download/view buttons"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/CourseDetail.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Added download/view button for resources with URLs. Shows Locked icon for resources without URLs. Also fetchCourse now populates resources as fallback."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 0
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Update course saves resources"
+    - "Lessons endpoint returns resources"
+    - "Admin edit fetches full course with resources"
+    - "Course detail has PDF download/view buttons"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    - agent: "main"
+      message: "Fixed 5 issues: (1) Backend update_course now persists resources, (2) Backend lessons endpoint now returns resources, (3) Backend course detail returns resource URLs always, (4) Frontend admin edit fetches full course detail before opening, (5) Frontend course detail has download/view buttons. Backend cannot be tested locally due to missing Supabase DATABASE_URL - this app runs on Render with PostgreSQL."

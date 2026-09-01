@@ -3,7 +3,7 @@ import { useAuth, API } from "@/App";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-import { Play, FileText, Lock, ArrowLeft, CheckCircle, Circle, Star, Send } from "lucide-react";
+import { Play, FileText, Lock, ArrowLeft, CheckCircle, Circle, Star, Send, Download, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +40,14 @@ export default function CourseDetail() {
   }, [courseId]);
 
   const fetchCourse = async () => {
-    try { const res = await axios.get(`${API}/courses/${courseId}`); setCourse(res.data); } catch {} setLoading(false);
+    try {
+      const res = await axios.get(`${API}/courses/${courseId}`);
+      setCourse(res.data);
+      // Set resources from course detail as initial data (may have URLs for free resources)
+      if (res.data.resources?.length > 0) {
+        setResources((prev) => prev.length > 0 ? prev : res.data.resources);
+      }
+    } catch {} setLoading(false);
   };
   const fetchLessons = async () => {
     try {
@@ -153,10 +160,25 @@ export default function CourseDetail() {
                       <h3 className="font-heading font-semibold text-xs text-slate-800 mb-2">Resources</h3>
                       <div className="space-y-1.5">
                         {resources.map((r, i) => (
-                          <div key={i} className="flex items-center gap-2.5 p-2 bg-slate-50 rounded-lg">
-                            <FileText className="w-3.5 h-3.5 text-indigo-500" />
-                            <span className="text-xs text-slate-700 flex-1">{r.name}</span>
-                            <Badge className="bg-indigo-50 text-indigo-600 border-0 text-[9px] uppercase">{r.type}</Badge>
+                          <div key={i} className="flex items-center gap-2.5 p-2.5 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                            <FileText className="w-4 h-4 text-indigo-500 shrink-0" />
+                            <span className="text-xs text-slate-700 flex-1 font-medium">{r.name}</span>
+                            <Badge className="bg-indigo-50 text-indigo-600 border-0 text-[9px] uppercase shrink-0">{r.type}</Badge>
+                            {r.url ? (
+                              <a
+                                href={r.url.startsWith("http") ? r.url : `${API.replace("/api", "")}${r.url.startsWith("/") ? r.url : `/api/media/files/${r.url}`}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-medium rounded-md transition-colors shrink-0"
+                              >
+                                <Download className="w-3 h-3" />
+                                View
+                              </a>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 flex items-center gap-1 shrink-0">
+                                <Lock className="w-3 h-3" /> Locked
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>

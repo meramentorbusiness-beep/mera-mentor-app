@@ -307,7 +307,24 @@ export default function AdminCourses() {
   };
 
   const openNew = () => { setEditingCourse({ ...emptyCourse }); setEditOpen(true); };
-  const openEdit = (course) => { setEditingCourse({ ...course }); setEditOpen(true); };
+  const openEdit = async (course) => {
+    try {
+      const res = await axios.get(`${API}/courses/${course.course_id}`);
+      const fullCourse = res.data;
+      // Preserve media_id for resources that have a url (so the uploader shows "uploaded" state)
+      const resources = (fullCourse.resources || []).map((r) => ({
+        ...r,
+        media_id: r.url ? "existing" : null,
+      }));
+      setEditingCourse({ ...fullCourse, resources });
+      setEditOpen(true);
+    } catch (e) {
+      console.error("Failed to fetch course detail for edit", e);
+      // Fallback to list data
+      setEditingCourse({ ...course, resources: course.resources || [], lessons: course.lessons || [] });
+      setEditOpen(true);
+    }
+  };
 
   const addLesson = () => {
     setEditingCourse((prev) => ({

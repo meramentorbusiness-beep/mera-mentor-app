@@ -309,7 +309,7 @@ async def get_course(course_id: str, db: AsyncSession = Depends(get_db)):
                 "resource_id": r.resource_id,
                 "name": r.name,
                 "type": r.type,
-                "url": r.url if r.is_free_preview else None,
+                "url": r.url,
                 "is_free_preview": r.is_free_preview,
             }
             for r in resources
@@ -355,6 +355,11 @@ async def get_course_lessons(course_id: str, user: dict = Depends(get_current_us
         progress_records = result.scalars().all()
         progress_map = {str(p.lesson_id): p.completed for p in progress_records}
     
+    # Get resources
+    stmt = select(Resource).where(Resource.course_id == course.id)
+    result = await db.execute(stmt)
+    resources = result.scalars().all()
+    
     return {
         "has_access": has_access,
         "lessons": [
@@ -370,6 +375,16 @@ async def get_course_lessons(course_id: str, user: dict = Depends(get_current_us
                 "completed": progress_map.get(str(l.id), False),
             }
             for l in lessons
+        ],
+        "resources": [
+            {
+                "resource_id": r.resource_id,
+                "name": r.name,
+                "type": r.type,
+                "url": r.url if (has_access or r.is_free_preview) else None,
+                "is_free_preview": r.is_free_preview,
+            }
+            for r in resources
         ],
     }
 
@@ -1492,6 +1507,24 @@ async def update_course(course_id: str, request: Request, admin: dict = Depends(
                 is_free_preview=lesson_data.get("is_free_preview", False),
             )
             db.add(lesson)
+    
+    # Update resources
+    if "resources" in body:
+        # Delete old resources
+        stmt = delete(Resource).where(Resource.course_id == course.id)
+        await db.execute(stmt)
+        
+        # Add new resources
+        for res_data in body["resources"]:
+            resource = Resource(
+                resource_id=res_data.get("resource_id") or f"res_{uuid.uuid4().hex[:8]}",
+                course_id=course.id,
+                name=res_data.get("name", "Resource"),
+                type=res_data.get("type", "pdf"),
+                url=res_data.get("url", ""),
+                is_free_preview=res_data.get("is_free_preview", False),
+            )
+            db.add(resource)
     
     await db.commit()
     
