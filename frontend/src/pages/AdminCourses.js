@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth, API } from "@/App";
 import axios from "axios";
 import { toast } from "sonner";
-import { Plus, Trash2, GripVertical, Save, Eye, EyeOff, Video, FileText, Users, IndianRupee, ShoppingBag, Upload, X, Check, Loader2, Youtube, File, Image, Settings, BarChart3 } from "lucide-react";
+import { Plus, Trash2, GripVertical, Save, Eye, EyeOff, Video, FileText, Users, IndianRupee, ShoppingBag, Upload, X, Check, Loader2, Youtube, File, Image, Settings, BarChart3, ClipboardList, FolderTree, Clock, Edit2, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -270,9 +270,449 @@ function MediaLibrary() {
   );
 }
 
+// Quiz Manager Component
+function QuizManager({ courses }) {
+  const [quizzes, setQuizzes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingQuiz, setEditingQuiz] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const emptyQuiz = {
+    title: "", course_id: "", questions: [], passing_score: 70,
+    is_timed: false, time_limit: 10, published: true,
+  };
+
+  const emptyQuestion = () => ({
+    question_id: `q_${Date.now().toString(36)}`,
+    question: "", options: ["", "", "", ""], correct_answer: "", explanation: "",
+  });
+
+  useEffect(() => { fetchQuizzes(); }, []);
+
+  const fetchQuizzes = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API}/admin/quizzes`, { withCredentials: true });
+      setQuizzes(res.data);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  const openNew = () => { setEditingQuiz({ ...emptyQuiz, questions: [emptyQuestion()] }); setEditOpen(true); };
+
+  const openEdit = async (quiz) => {
+    try {
+      const res = await axios.get(`${API}/admin/quizzes/${quiz.quiz_id}`, { withCredentials: true });
+      setEditingQuiz(res.data);
+      setEditOpen(true);
+    } catch (e) { toast.error("Failed to load quiz"); }
+  };
+
+  const saveQuiz = async () => {
+    if (!editingQuiz.title) { toast.error("Title is required"); return; }
+    if (!editingQuiz.course_id) { toast.error("Select a course"); return; }
+    if (!editingQuiz.questions?.length) { toast.error("Add at least one question"); return; }
+
+    // Validate questions
+    for (let i = 0; i < editingQuiz.questions.length; i++) {
+      const q = editingQuiz.questions[i];
+      if (!q.question) { toast.error(`Question ${i + 1}: text is required`); return; }
+      const filledOptions = q.options.filter(o => o.trim());
+      if (filledOptions.length < 2) { toast.error(`Question ${i + 1}: at least 2 options needed`); return; }
+      if (!q.correct_answer) { toast.error(`Question ${i + 1}: select correct answer`); return; }
+    }
+
+    setSaving(true);
+    try {
+      // Clean empty options
+      const payload = {
+        ...editingQuiz,
+        questions: editingQuiz.questions.map(q => ({
+          ...q,
+          options: q.options.filter(o => o.trim()),
+        })),
+      };
+      if (editingQuiz.quiz_id) {
+        await axios.put(`${API}/admin/quizzes/${editingQuiz.quiz_id}`, payload, { withCredentials: true });
+        toast.success("Quiz updated!");
+      } else {
+        await axios.post(`${API}/admin/quizzes`, payload, { withCredentials: true });
+        toast.success("Quiz created!");
+      }
+      setEditOpen(false);
+      fetchQuizzes();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Save failed");
+    } finally { setSaving(false); }
+  };
+
+  const deleteQuiz = async (quizId) => {
+    if (!window.confirm("Delete this quiz and all attempts?")) return;
+    try {
+      await axios.delete(`${API}/admin/quizzes/${quizId}`, { withCredentials: true });
+      toast.success("Quiz deleted");
+      fetchQuizzes();
+    } catch (e) { toast.error("Delete failed"); }
+  };
+
+  const updateQuestion = (idx, field, value) => {
+    setEditingQuiz(prev => {
+      const questions = [...prev.questions];
+      questions[idx] = { ...questions[idx], [field]: value };
+      return { ...prev, questions };
+    });
+  };
+
+  const updateOption = (qIdx, oIdx, value) => {
+    setEditingQuiz(prev => {
+      const questions = [...prev.questions];
+      const options = [...questions[qIdx].options];
+      options[oIdx] = value;
+      questions[qIdx] = { ...questions[qIdx], options };
+      return { ...prev, questions };
+    });
+  };
+
+  const addQuestion = () => {
+    setEditingQuiz(prev => ({ ...prev, questions: [...prev.questions, emptyQuestion()] }));
+  };
+
+  const removeQuestion = (idx) => {
+    setEditingQuiz(prev => ({ ...prev, questions: prev.questions.filter((_, i) => i !== idx) }));
+  };
+
+  const addOption = (qIdx) => {
+    setEditingQuiz(prev => {
+      const questions = [...prev.questions];
+      questions[qIdx] = { ...questions[qIdx], options: [...questions[qIdx].options, ""] };
+      return { ...prev, questions };
+    });
+  };
+
+  const removeOption = (qIdx, oIdx) => {
+    setEditingQuiz(prev => {
+      const questions = [...prev.questions];
+      const opts = questions[qIdx].options.filter((_, i) => i !== oIdx);
+      const newQ = { ...questions[qIdx], options: opts };
+      if (newQ.correct_answer === questions[qIdx].options[oIdx]) newQ.correct_answer = "";
+      questions[qIdx] = newQ;
+      return { ...prev, questions };
+    });
+  };
+
+  return (
+    <div>
+      <div className="flex justify-end mb-4">
+        <Button onClick={openNew} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-5 text-xs font-semibold" data-testid="create-quiz-btn">
+          <Plus className="w-4 h-4 mr-1" /> New Quiz
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-10"><Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" /></div>
+      ) : quizzes.length === 0 ? (
+        <Card className="bg-slate-50 rounded-xl border border-dashed border-slate-200 p-10 text-center">
+          <ClipboardList className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+          <p className="text-slate-400 text-sm">No quizzes created yet</p>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {quizzes.map((q, idx) => (
+            <Card key={q.quiz_id} className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 flex items-center gap-4" data-testid={`quiz-row-${idx}`}>
+              <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
+                <ClipboardList className="w-5 h-5 text-purple-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-heading font-semibold text-slate-900 text-sm truncate">{q.title}</h3>
+                  {!q.published && <Badge className="bg-slate-100 text-slate-500 border-0 text-[10px]">Draft</Badge>}
+                  {q.is_timed && <Badge className="bg-blue-50 text-blue-600 border-0 text-[10px]"><Clock className="w-2.5 h-2.5 mr-0.5 inline" />{q.time_limit}m</Badge>}
+                </div>
+                <p className="text-xs text-slate-400 font-body">{q.course_title} &middot; {q.question_count} questions &middot; Pass: {q.passing_score}%</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button variant="outline" size="sm" onClick={() => openEdit(q)} className="text-xs rounded-lg h-8" data-testid={`edit-quiz-btn-${idx}`}>Edit</Button>
+                <Button variant="ghost" size="sm" onClick={() => deleteQuiz(q.quiz_id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0">
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Quiz Editor Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading">{editingQuiz?.quiz_id ? "Edit Quiz" : "Create Quiz"}</DialogTitle>
+          </DialogHeader>
+
+          {editingQuiz && (
+            <div className="space-y-4 py-2">
+              {/* Quiz Metadata */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-body">Quiz Title</Label>
+                  <Input value={editingQuiz.title} onChange={e => setEditingQuiz({ ...editingQuiz, title: e.target.value })} className="mt-1" placeholder="e.g. Chapter 1 Assessment" data-testid="quiz-title-input" />
+                </div>
+                <div>
+                  <Label className="text-xs font-body">Course</Label>
+                  <Select value={editingQuiz.course_id} onValueChange={v => setEditingQuiz({ ...editingQuiz, course_id: v })}>
+                    <SelectTrigger className="mt-1" data-testid="quiz-course-select"><SelectValue placeholder="Select course" /></SelectTrigger>
+                    <SelectContent>
+                      {courses.map(c => (
+                        <SelectItem key={c.course_id} value={c.course_id}>{c.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs font-body">Pass Threshold (%)</Label>
+                  <Input type="number" min={0} max={100} value={editingQuiz.passing_score} onChange={e => setEditingQuiz({ ...editingQuiz, passing_score: parseInt(e.target.value) || 0 })} className="mt-1 font-number" data-testid="quiz-pass-input" />
+                </div>
+                <div className="flex items-end gap-3">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={editingQuiz.is_timed} onCheckedChange={v => setEditingQuiz({ ...editingQuiz, is_timed: v })} />
+                    <Label className="text-xs font-body">Timed</Label>
+                  </div>
+                  {editingQuiz.is_timed && (
+                    <div className="flex-1">
+                      <Input type="number" min={1} value={editingQuiz.time_limit || ""} onChange={e => setEditingQuiz({ ...editingQuiz, time_limit: parseInt(e.target.value) || null })} className="font-number h-9" placeholder="min" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-end">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={editingQuiz.published} onCheckedChange={v => setEditingQuiz({ ...editingQuiz, published: v })} />
+                    <Label className="text-xs font-body">Published</Label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Questions */}
+              <div className="border-t border-slate-100 pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-heading font-semibold text-sm text-slate-900 flex items-center gap-1.5">
+                    <ClipboardList className="w-4 h-4 text-purple-500" /> Questions ({editingQuiz.questions?.length || 0})
+                  </h3>
+                  <Button variant="outline" size="sm" onClick={addQuestion} className="text-xs rounded-lg h-7" data-testid="add-question-btn">
+                    <Plus className="w-3 h-3 mr-1" /> Add Question
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  {editingQuiz.questions?.map((q, qi) => (
+                    <Card key={q.question_id || qi} className="bg-slate-50 rounded-lg p-4 border border-slate-100" data-testid={`question-card-${qi}`}>
+                      <div className="flex items-start gap-2 mb-3">
+                        <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold shrink-0 mt-1">{qi + 1}</span>
+                        <div className="flex-1">
+                          <Input placeholder="Question text" value={q.question} onChange={e => updateQuestion(qi, "question", e.target.value)} className="text-sm font-medium" data-testid={`question-text-${qi}`} />
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => removeQuestion(qi)} className="text-red-400 h-8 w-8 p-0 shrink-0"><Trash2 className="w-3.5 h-3.5" /></Button>
+                      </div>
+
+                      {/* Options */}
+                      <div className="ml-8 space-y-2 mb-3">
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wider">Options (click radio to set correct answer)</p>
+                        {q.options.map((opt, oi) => (
+                          <div key={oi} className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => updateQuestion(qi, "correct_answer", opt)}
+                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                opt && q.correct_answer === opt
+                                  ? "border-emerald-500 bg-emerald-500"
+                                  : "border-slate-300 hover:border-slate-400"
+                              }`}
+                              data-testid={`option-radio-${qi}-${oi}`}
+                            >
+                              {opt && q.correct_answer === opt && <Check className="w-3 h-3 text-white" />}
+                            </button>
+                            <Input
+                              placeholder={`Option ${String.fromCharCode(65 + oi)}`}
+                              value={opt}
+                              onChange={e => {
+                                const newVal = e.target.value;
+                                if (q.correct_answer === opt) updateQuestion(qi, "correct_answer", newVal);
+                                updateOption(qi, oi, newVal);
+                              }}
+                              className="text-xs h-8 flex-1"
+                              data-testid={`option-input-${qi}-${oi}`}
+                            />
+                            {q.options.length > 2 && (
+                              <Button variant="ghost" size="sm" onClick={() => removeOption(qi, oi)} className="text-slate-400 h-7 w-7 p-0"><X className="w-3 h-3" /></Button>
+                            )}
+                          </div>
+                        ))}
+                        {q.options.length < 6 && (
+                          <Button variant="ghost" size="sm" onClick={() => addOption(qi)} className="text-xs text-indigo-600 h-7 pl-7">
+                            <Plus className="w-3 h-3 mr-1" /> Add Option
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Explanation */}
+                      <div className="ml-8">
+                        <Input placeholder="Explanation (shown after answering, optional)" value={q.explanation || ""} onChange={e => updateQuestion(qi, "explanation", e.target.value)} className="text-xs h-8 text-slate-500" data-testid={`question-explanation-${qi}`} />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} className="rounded-full text-xs">Cancel</Button>
+            <Button onClick={saveQuiz} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-xs" data-testid="save-quiz-btn">
+              {saving ? "Saving..." : <><Save className="w-3.5 h-3.5 mr-1" /> Save Quiz</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// Category Manager Component
+function CategoryManager() {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newName, setNewName] = useState("");
+  const [newParentId, setNewParentId] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editingName, setEditingName] = useState("");
+
+  useEffect(() => { fetchCategories(); }, []);
+
+  const fetchCategories = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API}/categories`);
+      setCategories(res.data);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  const addCategory = async () => {
+    if (!newName.trim()) { toast.error("Name is required"); return; }
+    try {
+      await axios.post(`${API}/admin/categories`, {
+        name: newName.trim(),
+        parent_id: newParentId || null,
+      }, { withCredentials: true });
+      toast.success("Category created");
+      setNewName("");
+      setNewParentId("");
+      fetchCategories();
+    } catch (e) { toast.error(e.response?.data?.detail || "Create failed"); }
+  };
+
+  const renameCategory = async (catId) => {
+    if (!editingName.trim()) return;
+    try {
+      await axios.put(`${API}/admin/categories/${catId}`, { name: editingName.trim() }, { withCredentials: true });
+      toast.success("Category renamed");
+      setEditingId(null);
+      fetchCategories();
+    } catch (e) { toast.error(e.response?.data?.detail || "Rename failed"); }
+  };
+
+  const deleteCategory = async (catId) => {
+    if (!window.confirm("Delete this category?")) return;
+    try {
+      await axios.delete(`${API}/admin/categories/${catId}`, { withCredentials: true });
+      toast.success("Category deleted");
+      fetchCategories();
+    } catch (e) { toast.error(e.response?.data?.detail || "Delete failed"); }
+  };
+
+  const rootCategories = categories.filter(c => !c.parent_id);
+  const getChildren = (parentId) => categories.filter(c => c.parent_id === parentId);
+
+  return (
+    <Card className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+      <h3 className="font-heading font-semibold text-slate-900 mb-4 flex items-center gap-2">
+        <FolderTree className="w-4 h-4 text-indigo-500" /> Course Categories
+      </h3>
+
+      {/* Add Category */}
+      <div className="flex gap-2 mb-4">
+        <Input placeholder="New category name" value={newName} onChange={e => setNewName(e.target.value)} className="text-xs h-9 flex-1" data-testid="new-category-input"
+          onKeyDown={e => e.key === "Enter" && addCategory()} />
+        <Select value={newParentId || "none"} onValueChange={v => setNewParentId(v === "none" ? "" : v)}>
+          <SelectTrigger className="w-36 h-9 text-xs"><SelectValue placeholder="No parent" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">No parent</SelectItem>
+            {rootCategories.map(c => (
+              <SelectItem key={c.category_id} value={c.category_id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button onClick={addCategory} className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-4 text-xs rounded-lg" data-testid="add-category-btn">
+          <Plus className="w-3.5 h-3.5 mr-1" /> Add
+        </Button>
+      </div>
+
+      {/* Category List */}
+      {loading ? (
+        <div className="text-center py-6"><Loader2 className="w-5 h-5 animate-spin mx-auto text-slate-400" /></div>
+      ) : categories.length === 0 ? (
+        <p className="text-xs text-slate-400 text-center py-4">No categories yet</p>
+      ) : (
+        <div className="space-y-1">
+          {rootCategories.map(cat => (
+            <div key={cat.category_id}>
+              <CategoryRow cat={cat} editingId={editingId} editingName={editingName} setEditingId={setEditingId} setEditingName={setEditingName} renameCategory={renameCategory} deleteCategory={deleteCategory} depth={0} />
+              {getChildren(cat.category_id).map(child => (
+                <CategoryRow key={child.category_id} cat={child} editingId={editingId} editingName={editingName} setEditingId={setEditingId} setEditingName={setEditingName} renameCategory={renameCategory} deleteCategory={deleteCategory} depth={1} />
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function CategoryRow({ cat, editingId, editingName, setEditingId, setEditingName, renameCategory, deleteCategory, depth }) {
+  const isEditing = editingId === cat.category_id;
+  return (
+    <div className={`flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 group ${depth > 0 ? "ml-6" : ""}`} data-testid={`category-row-${cat.category_id}`}>
+      {depth > 0 && <ChevronRight className="w-3 h-3 text-slate-300" />}
+      <FolderTree className={`w-3.5 h-3.5 ${depth > 0 ? "text-slate-400" : "text-indigo-500"} shrink-0`} />
+      {isEditing ? (
+        <Input value={editingName} onChange={e => setEditingName(e.target.value)} className="text-xs h-7 flex-1"
+          onKeyDown={e => { if (e.key === "Enter") renameCategory(cat.category_id); if (e.key === "Escape") setEditingId(null); }}
+          autoFocus />
+      ) : (
+        <span className="text-xs text-slate-700 flex-1 font-medium">{cat.name}</span>
+      )}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {isEditing ? (
+          <>
+            <Button variant="ghost" size="sm" onClick={() => renameCategory(cat.category_id)} className="h-6 w-6 p-0 text-emerald-600"><Check className="w-3 h-3" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} className="h-6 w-6 p-0 text-slate-400"><X className="w-3 h-3" /></Button>
+          </>
+        ) : (
+          <>
+            <Button variant="ghost" size="sm" onClick={() => { setEditingId(cat.category_id); setEditingName(cat.name); }} className="h-6 w-6 p-0 text-slate-400"><Edit2 className="w-3 h-3" /></Button>
+            <Button variant="ghost" size="sm" onClick={() => deleteCategory(cat.category_id)} className="h-6 w-6 p-0 text-red-400"><Trash2 className="w-3 h-3" /></Button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminCourses() {
   const { user } = useAuth();
   const [courses, setCourses] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [adminStats, setAdminStats] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
@@ -290,12 +730,20 @@ export default function AdminCourses() {
     if (!user?.is_admin) return;
     fetchCourses();
     fetchStats();
+    fetchCategories();
   }, [user]);
 
   const fetchCourses = async () => {
     try {
       const res = await axios.get(`${API}/courses`);
       setCourses(res.data);
+    } catch (e) { console.error(e); }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await axios.get(`${API}/categories`);
+      setCategories(res.data);
     } catch (e) { console.error(e); }
   };
 
@@ -474,6 +922,9 @@ export default function AdminCourses() {
           <TabsTrigger value="courses" className="rounded-full px-4 py-1.5 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-xs font-medium">
             Courses ({courses.length})
           </TabsTrigger>
+          <TabsTrigger value="quizzes" className="rounded-full px-4 py-1.5 data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm text-xs font-medium">
+            Quizzes
+          </TabsTrigger>
           <TabsTrigger value="media" className="rounded-full px-4 py-1.5 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-xs font-medium">
             Media Library
           </TabsTrigger>
@@ -513,6 +964,10 @@ export default function AdminCourses() {
           </div>
         </TabsContent>
 
+        <TabsContent value="quizzes">
+          <QuizManager courses={courses} />
+        </TabsContent>
+
         <TabsContent value="media">
           <div className="grid md:grid-cols-3 gap-5 mb-6">
             <MediaUploader type="video" onUpload={() => {}} />
@@ -523,7 +978,7 @@ export default function AdminCourses() {
         </TabsContent>
 
         <TabsContent value="settings">
-          <div className="grid md:grid-cols-2 gap-5">
+          <div className="grid md:grid-cols-2 gap-5 mb-5">
             <CommissionSettings />
             <Card className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
               <h3 className="font-heading font-semibold text-slate-900 mb-4 flex items-center gap-2">
@@ -544,6 +999,7 @@ export default function AdminCourses() {
               </div>
             </Card>
           </div>
+          <CategoryManager />
         </TabsContent>
       </Tabs>
 
@@ -566,9 +1022,14 @@ export default function AdminCourses() {
                   <Select value={editingCourse.category} onValueChange={(v) => setEditingCourse({ ...editingCourse, category: v })}>
                     <SelectTrigger className="mt-1" data-testid="course-category-select"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {["Development", "Data Science", "Marketing", "Design", "Business", "Bundle", "General"].map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
+                      {categories.length > 0
+                        ? categories.map((c) => (
+                            <SelectItem key={c.category_id} value={c.name}>{c.name}</SelectItem>
+                          ))
+                        : ["Development", "Data Science", "Marketing", "Design", "Business", "Bundle", "General"].map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))
+                      }
                     </SelectContent>
                   </Select>
                 </div>

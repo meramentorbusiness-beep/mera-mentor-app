@@ -22,7 +22,7 @@ from lib.database import get_db, init_db, close_db, async_session_maker
 from models.models import (
     User, UserSession, Course, Lesson, Resource, Purchase, Commission,
     Payout, CourseProgress, Certificate, Quiz, QuizAttempt, Review,
-    Coupon, Notification, MediaAccessLog, EmailLog, Media,
+    Coupon, Notification, MediaAccessLog, EmailLog, Media, Category,
     PurchaseStatus, CommissionStatus, PayoutStatus
 )
 
@@ -360,8 +360,31 @@ async def get_course_lessons(course_id: str, user: dict = Depends(get_current_us
     result = await db.execute(stmt)
     resources = result.scalars().all()
     
+    # Get quizzes
+    stmt = select(Quiz).where(Quiz.course_id == course.id, Quiz.published == True)
+    result = await db.execute(stmt)
+    quizzes = result.scalars().all()
+    
+    # Get user's last quiz attempts
+    quiz_attempts = {}
+    if has_access and quizzes:
+        quiz_ids = [q.id for q in quizzes]
+        stmt = select(QuizAttempt).where(
+            QuizAttempt.user_id == user["user_id"],
+            QuizAttempt.quiz_id.in_(quiz_ids)
+        ).order_by(QuizAttempt.created_at.desc())
+        result = await db.execute(stmt)
+        for attempt in result.scalars().all():
+            qid = str(attempt.quiz_id)
+            if qid not in quiz_attempts:
+                quiz_attempts[qid] = attempt
+    
+    completed_lessons = sum(1 for v in progress_map.values() if v)
+    
     return {
         "has_access": has_access,
+        "progress_count": completed_lessons,
+        "total_count": len(lessons),
         "lessons": [
             {
                 "lesson_id": l.lesson_id,
@@ -385,6 +408,21 @@ async def get_course_lessons(course_id: str, user: dict = Depends(get_current_us
                 "is_free_preview": r.is_free_preview,
             }
             for r in resources
+        ],
+        "quizzes": [
+            {
+                "quiz_id": q.quiz_id,
+                "title": q.title,
+                "questions": q.questions if has_access else [],
+                "pass_percentage": q.passing_score,
+                "is_timed": q.is_timed,
+                "time_limit": q.time_limit,
+                "last_attempt": {
+                    "score": quiz_attempts[str(q.id)].score,
+                    "passed": quiz_attempts[str(q.id)].passed,
+                } if str(q.id) in quiz_attempts else None,
+            }
+            for q in quizzes
         ],
     }
 
@@ -1555,6 +1593,325 @@ async def get_commission_settings(admin: dict = Depends(require_admin)):
         "min_withdrawal": MIN_WITHDRAWAL,
     }
 
+# ========== Quiz Admin Routes ==========
+
+@api_router.post("/admin/quizzes")
+async def create_quiz(request: Request, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    """Create a new quiz"""
+    body = await request.json()
+    course_id_str = body.get("course_id")
+    if not course_id_str:
+        raise HTTPException(status_code=400, detail="course_id is required")
+    
+    stmt = select(Course).where(Course.course_id == course_id_str)
+    result = await db.execute(stmt)
+    course = result.scalar_one_or_none()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
+    # Validate questions
+    questions = body.get("questions", [])
+    for i, q in enumerate(questions):
+        if not q.get("question"):
+            raise HTTPException(status_code=400, detail=f"Question {i+1} text is required")
+        if not q.get("options") or len(q["options"]) < 2:
+            raise HTTPException(status_code=400, detail=f"Question {i+1} needs at least 2 options")
+        if not q.get("correct_answer"):
+            raise HTTPException(status_code=400, detail=f"Question {i+1} needs a correct answer")
+        if q["correct_answer"] not in q["options"]:
+            raise HTTPException(status_code=400, detail=f"Question {i+1} correct answer must be one of the options")
+        if "question_id" not in q:
+            q["question_id"] = f"q_{uuid.uuid4().hex[:8]}"
+    
+    quiz = Quiz(
+        quiz_id=f"quiz_{uuid.uuid4().hex[:8]}",
+        course_id=course.id,
+        title=body.get("title", "Untitled Quiz"),
+        questions=questions,
+        passing_score=body.get("passing_score", 70),
+        is_timed=body.get("is_timed", False),
+        time_limit=body.get("time_limit"),
+        published=body.get("published", True),
+    )
+    db.add(quiz)
+    await db.commit()
+    await db.refresh(quiz)
+    
+    return {
+        "message": "Quiz created",
+        "quiz_id": quiz.quiz_id,
+        "title": quiz.title,
+        "question_count": len(questions),
+    }
+
+@api_router.get("/admin/quizzes")
+async def list_quizzes(admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    """List all quizzes with course info"""
+    stmt = select(Quiz, Course.course_id, Course.title).join(Course, Quiz.course_id == Course.id).order_by(Quiz.created_at.desc())
+    result = await db.execute(stmt)
+    rows = result.all()
+    
+    return [
+        {
+            "quiz_id": q.quiz_id,
+            "title": q.title,
+            "course_id": course_id_str,
+            "course_title": course_title,
+            "question_count": len(q.questions) if q.questions else 0,
+            "passing_score": q.passing_score,
+            "is_timed": q.is_timed,
+            "time_limit": q.time_limit,
+            "published": q.published,
+            "created_at": q.created_at.isoformat() if q.created_at else None,
+        }
+        for q, course_id_str, course_title in rows
+    ]
+
+@api_router.get("/admin/quizzes/{quiz_id}")
+async def get_quiz(quiz_id: str, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    """Get quiz detail for editing"""
+    stmt = select(Quiz).where(Quiz.quiz_id == quiz_id)
+    result = await db.execute(stmt)
+    quiz = result.scalar_one_or_none()
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Get course_id string
+    stmt2 = select(Course.course_id).where(Course.id == quiz.course_id)
+    result2 = await db.execute(stmt2)
+    course_id_str = result2.scalar_one_or_none() or ""
+    
+    return {
+        "quiz_id": quiz.quiz_id,
+        "title": quiz.title,
+        "course_id": course_id_str,
+        "questions": quiz.questions or [],
+        "passing_score": quiz.passing_score,
+        "is_timed": quiz.is_timed,
+        "time_limit": quiz.time_limit,
+        "published": quiz.published,
+    }
+
+@api_router.put("/admin/quizzes/{quiz_id}")
+async def update_quiz(quiz_id: str, request: Request, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    """Update a quiz"""
+    body = await request.json()
+    
+    stmt = select(Quiz).where(Quiz.quiz_id == quiz_id)
+    result = await db.execute(stmt)
+    quiz = result.scalar_one_or_none()
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Update course if changed
+    if "course_id" in body:
+        stmt2 = select(Course).where(Course.course_id == body["course_id"])
+        result2 = await db.execute(stmt2)
+        course = result2.scalar_one_or_none()
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+        quiz.course_id = course.id
+    
+    # Validate and update questions
+    if "questions" in body:
+        questions = body["questions"]
+        for i, q in enumerate(questions):
+            if not q.get("question"):
+                raise HTTPException(status_code=400, detail=f"Question {i+1} text is required")
+            if not q.get("options") or len(q["options"]) < 2:
+                raise HTTPException(status_code=400, detail=f"Question {i+1} needs at least 2 options")
+            if not q.get("correct_answer"):
+                raise HTTPException(status_code=400, detail=f"Question {i+1} needs a correct answer")
+            if "question_id" not in q:
+                q["question_id"] = f"q_{uuid.uuid4().hex[:8]}"
+        quiz.questions = questions
+    
+    for field in ["title", "passing_score", "is_timed", "time_limit", "published"]:
+        if field in body:
+            setattr(quiz, field, body[field])
+    
+    await db.commit()
+    return {"message": "Quiz updated"}
+
+@api_router.delete("/admin/quizzes/{quiz_id}")
+async def delete_quiz(quiz_id: str, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    """Delete a quiz and its attempts"""
+    stmt = select(Quiz).where(Quiz.quiz_id == quiz_id)
+    result = await db.execute(stmt)
+    quiz = result.scalar_one_or_none()
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Delete attempts first
+    await db.execute(delete(QuizAttempt).where(QuizAttempt.quiz_id == quiz.id))
+    await db.delete(quiz)
+    await db.commit()
+    return {"message": "Quiz deleted"}
+
+# ========== Quiz Student Routes ==========
+
+@api_router.post("/quizzes/{quiz_id}/submit")
+async def submit_quiz(quiz_id: str, request: Request, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Submit quiz answers and auto-grade"""
+    body = await request.json()
+    answers = body.get("answers", {})
+    
+    stmt = select(Quiz).where(Quiz.quiz_id == quiz_id)
+    result = await db.execute(stmt)
+    quiz = result.scalar_one_or_none()
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Check access: user must have purchased the course or be admin
+    has_access = user.get("is_admin", False)
+    if not has_access:
+        stmt2 = select(Purchase).where(
+            Purchase.user_id == user["user_id"],
+            Purchase.course_id == quiz.course_id,
+            Purchase.status == PurchaseStatus.COMPLETED.value
+        )
+        result2 = await db.execute(stmt2)
+        has_access = result2.scalar_one_or_none() is not None
+    
+    if not has_access:
+        raise HTTPException(status_code=403, detail="Purchase required")
+    
+    # Auto-grade
+    questions = quiz.questions or []
+    correct = 0
+    total = len(questions)
+    results_detail = []
+    
+    for q in questions:
+        qid = q.get("question_id", "")
+        user_answer = answers.get(qid, "")
+        is_correct = user_answer == q.get("correct_answer", "")
+        if is_correct:
+            correct += 1
+        results_detail.append({
+            "question_id": qid,
+            "user_answer": user_answer,
+            "correct_answer": q.get("correct_answer", ""),
+            "is_correct": is_correct,
+            "explanation": q.get("explanation", ""),
+        })
+    
+    score = round((correct / total * 100)) if total > 0 else 0
+    passed = score >= quiz.passing_score
+    
+    # Save attempt
+    attempt = QuizAttempt(
+        user_id=user["user_id"],
+        quiz_id=quiz.id,
+        score=score,
+        passed=passed,
+        answers=results_detail,
+    )
+    db.add(attempt)
+    await db.commit()
+    
+    return {
+        "score": score,
+        "passed": passed,
+        "correct": correct,
+        "total": total,
+        "pass_percentage": quiz.passing_score,
+        "results": results_detail,
+    }
+
+# ========== Category Routes ==========
+
+@api_router.get("/categories")
+async def list_categories(db: AsyncSession = Depends(get_db)):
+    """List all categories (public)"""
+    stmt = select(Category).order_by(Category.name)
+    result = await db.execute(stmt)
+    categories = result.scalars().all()
+    
+    # Build a lookup from DB id to category_id for parent resolution
+    id_to_cat_id = {str(c.id): c.category_id for c in categories}
+    
+    return [
+        {
+            "category_id": c.category_id,
+            "name": c.name,
+            "parent_id": id_to_cat_id.get(str(c.parent_id)) if c.parent_id else None,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+        }
+        for c in categories
+    ]
+
+@api_router.post("/admin/categories")
+async def create_category(request: Request, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    """Create a new category"""
+    body = await request.json()
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Category name is required")
+    
+    # Check duplicate
+    stmt = select(Category).where(func.lower(Category.name) == name.lower())
+    result = await db.execute(stmt)
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Category already exists")
+    
+    # Handle parent
+    parent_db_id = None
+    parent_cat_id = body.get("parent_id")
+    if parent_cat_id:
+        stmt2 = select(Category).where(Category.category_id == parent_cat_id)
+        result2 = await db.execute(stmt2)
+        parent = result2.scalar_one_or_none()
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent category not found")
+        parent_db_id = parent.id
+    
+    cat = Category(
+        category_id=f"cat_{uuid.uuid4().hex[:8]}",
+        name=name,
+        parent_id=parent_db_id,
+    )
+    db.add(cat)
+    await db.commit()
+    
+    return {"message": "Category created", "category_id": cat.category_id, "name": cat.name}
+
+@api_router.put("/admin/categories/{category_id}")
+async def update_category(category_id: str, request: Request, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    """Rename a category"""
+    body = await request.json()
+    
+    stmt = select(Category).where(Category.category_id == category_id)
+    result = await db.execute(stmt)
+    cat = result.scalar_one_or_none()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    name = body.get("name", "").strip()
+    if name:
+        # Check duplicate
+        stmt2 = select(Category).where(func.lower(Category.name) == name.lower(), Category.id != cat.id)
+        result2 = await db.execute(stmt2)
+        if result2.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Category name already exists")
+        cat.name = name
+    
+    await db.commit()
+    return {"message": "Category updated"}
+
+@api_router.delete("/admin/categories/{category_id}")
+async def delete_category(category_id: str, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    """Delete a category"""
+    stmt = select(Category).where(Category.category_id == category_id)
+    result = await db.execute(stmt)
+    cat = result.scalar_one_or_none()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    await db.delete(cat)
+    await db.commit()
+    return {"message": "Category deleted"}
+
 # ========== Media Upload Routes ==========
 
 ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/x-msvideo", "video/webm"]
@@ -1734,6 +2091,44 @@ if STATIC_BUILD_DIR.exists():
 async def startup():
     """Initialize database and storage on startup"""
     await init_db()
+    
+    # Run lightweight migrations for new columns on existing tables
+    try:
+        from sqlalchemy import text
+        async with async_session_maker() as session:
+            # Add new Quiz columns if missing
+            for col, coldef in [
+                ("is_timed", "BOOLEAN DEFAULT FALSE"),
+                ("time_limit", "INTEGER"),
+                ("published", "BOOLEAN DEFAULT TRUE"),
+                ("updated_at", "TIMESTAMPTZ DEFAULT NOW()"),
+            ]:
+                try:
+                    await session.execute(text(f"ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS {col} {coldef}"))
+                except Exception:
+                    pass
+            await session.commit()
+            print("✅ Migration check complete")
+    except Exception as e:
+        print(f"⚠️  Migration warning: {e}")
+    
+    # Seed default categories if table is empty
+    try:
+        async with async_session_maker() as session:
+            result = await session.execute(select(func.count(Category.id)))
+            count = result.scalar() or 0
+            if count == 0:
+                defaults = ["Development", "Data Science", "Marketing", "Design", "Business", "Bundle", "General"]
+                for name in defaults:
+                    session.add(Category(
+                        category_id=f"cat_{uuid.uuid4().hex[:8]}",
+                        name=name,
+                    ))
+                await session.commit()
+                print(f"✅ Seeded {len(defaults)} default categories")
+    except Exception as e:
+        print(f"⚠️  Category seed warning: {e}")
+    
     try:
         init_storage()
         from services.storage_service import is_storage_enabled

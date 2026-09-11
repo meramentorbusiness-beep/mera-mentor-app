@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "PDF resources uploaded under courses are not visible in the UI (no view/download link), and when editing a course in admin panel the previously uploaded PDF resources appear empty."
+user_problem_statement: "Add quiz/test creation in admin portal (MCQ, auto-grading) + folder/category management for courses."
 
 backend:
   - task: "Update course saves resources"
@@ -115,9 +115,9 @@ backend:
     status_history:
         - working: "NA"
           agent: "main"
-          comment: "Added resource handling to PUT /admin/courses/{course_id} - deletes old resources and creates new ones (same pattern as lessons). Cannot test locally - requires Supabase DATABASE_URL."
+          comment: "Added resource handling to PUT /admin/courses/{course_id}."
 
-  - task: "Lessons endpoint returns resources"
+  - task: "Quiz CRUD admin routes"
     implemented: true
     working: "NA"
     file: "backend/server.py"
@@ -127,9 +127,9 @@ backend:
     status_history:
         - working: "NA"
           agent: "main"
-          comment: "Added resources query and response to GET /courses/{course_id}/lessons. Resources get full URLs for users with access or free preview."
+          comment: "POST/GET/PUT/DELETE /admin/quizzes - full quiz CRUD with question validation. Reuses existing Quiz model, added is_timed/time_limit/published columns."
 
-  - task: "Course detail returns resource URLs"
+  - task: "Quiz auto-grading submission"
     implemented: true
     working: "NA"
     file: "backend/server.py"
@@ -139,10 +139,34 @@ backend:
     status_history:
         - working: "NA"
           agent: "main"
-          comment: "Changed GET /courses/{course_id} to always return resource URLs (was previously only for free_preview). Needed for admin edit flow."
+          comment: "POST /quizzes/{quiz_id}/submit - compares selected option to correct_answer, calculates score percentage, saves QuizAttempt."
+
+  - task: "Quizzes in lessons endpoint"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "GET /courses/{course_id}/lessons now returns quizzes array with last_attempt data, progress_count, total_count."
+
+  - task: "Category CRUD routes"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "GET /categories, POST/PUT/DELETE /admin/categories. New Category model with parent_id for nesting. Default categories seeded on startup."
 
 frontend:
-  - task: "Admin edit fetches full course with resources"
+  - task: "Admin quiz management tab"
     implemented: true
     working: "NA"
     file: "frontend/src/pages/AdminCourses.js"
@@ -152,36 +176,37 @@ frontend:
     status_history:
         - working: "NA"
           agent: "main"
-          comment: "openEdit now fetches GET /courses/{courseId} to populate resources and lessons before opening dialog. Maps url presence to media_id for uploaded state display."
+          comment: "New Quizzes tab with QuizManager component - list, create/edit dialog with question builder (MCQ options, correct answer radio, explanation), pass threshold, timed toggle, publish toggle."
 
-  - task: "Course detail has PDF download/view buttons"
+  - task: "Category management in admin settings"
     implemented: true
     working: "NA"
-    file: "frontend/src/pages/CourseDetail.js"
+    file: "frontend/src/pages/AdminCourses.js"
     stuck_count: 0
     priority: "high"
     needs_retesting: true
     status_history:
         - working: "NA"
           agent: "main"
-          comment: "Added download/view button for resources with URLs. Shows Locked icon for resources without URLs. Also fetchCourse now populates resources as fallback."
+          comment: "CategoryManager in Settings tab - add/rename/delete categories with optional parent nesting. Course category dropdown now uses dynamic categories from API."
 
 metadata:
   created_by: "main_agent"
-  version: "1.0"
+  version: "2.0"
   test_sequence: 0
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Update course saves resources"
-    - "Lessons endpoint returns resources"
-    - "Admin edit fetches full course with resources"
-    - "Course detail has PDF download/view buttons"
+    - "Quiz CRUD admin routes"
+    - "Quiz auto-grading submission"
+    - "Category CRUD routes"
+    - "Admin quiz management tab"
+    - "Category management in admin settings"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
     - agent: "main"
-      message: "Fixed 5 issues: (1) Backend update_course now persists resources, (2) Backend lessons endpoint now returns resources, (3) Backend course detail returns resource URLs always, (4) Frontend admin edit fetches full course detail before opening, (5) Frontend course detail has download/view buttons. Backend cannot be tested locally due to missing Supabase DATABASE_URL - this app runs on Render with PostgreSQL."
+      message: "Implemented quiz management (admin CRUD + student auto-grading) and category management. Reused existing Quiz/QuizAttempt models, added 3 new columns. Created new Category model. Added startup migration for new columns + default category seeding. Backend cannot be tested locally due to missing Supabase DATABASE_URL."

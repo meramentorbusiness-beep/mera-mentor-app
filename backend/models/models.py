@@ -293,8 +293,12 @@ class Quiz(Base):
     title = Column(String(255), nullable=False)
     questions = Column(JSON, default=list)
     passing_score = Column(Integer, default=70)
+    is_timed = Column(Boolean, default=False)
+    time_limit = Column(Integer, nullable=True)  # minutes
+    published = Column(Boolean, default=True)
     
     created_at = Column(DateTime(timezone=True), default=utc_now)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
     
     course = relationship("Course", back_populates="quizzes")
 
@@ -418,3 +422,16 @@ class Media(Base):
     
     uploaded_by = Column(UUID(as_uuid=False), ForeignKey("users.id"))
     created_at = Column(DateTime(timezone=True), default=utc_now)
+
+
+class Category(Base):
+    __tablename__ = "categories"
+    
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    category_id = Column(String(50), unique=True, nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    parent_id = Column(UUID(as_uuid=False), ForeignKey("categories.id"), nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+    
+    children = relationship("Category", backref="parent", remote_side=[id], cascade="all, delete-orphan", single_parent=True)
