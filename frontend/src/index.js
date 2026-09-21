@@ -1,11 +1,11 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import "@/index.css";
-import App from "@/App";
+import DataAnalyticsLandingPage from "@/landing/DataAnalyticsLandingPage";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+// Keep the dashboard, charts, router and its styles out of the public landing bundle.
+if (window.location.pathname.replace(/\/$/, '') === '/courses/data-analytics') {
+  root.render(<DataAnalyticsLandingPage />);
+} else {
+  import('@/App').then(({ default: App }) => root.render(<React.StrictMode><App /></React.StrictMode>));
+}

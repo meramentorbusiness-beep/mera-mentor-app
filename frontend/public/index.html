@@ -3,11 +3,22 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#000000" />
-        <meta name="description" content="A product of emergent.sh" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap" rel="stylesheet" />
+        <meta name="theme-color" content="#111513" />
+        <meta name="description" content="6 Mahine Mein Data Analyst Ban Jao, Bina Coding Background Ke. Excel, SQL, Power BI aur AI tools. Mera Mentor course ₹1,299. Free webinar join karo." />
+        <link rel="preload" href="/landing/jakarta.woff2" as="font" type="font/woff2" crossorigin />
+        <link rel="preload" as="image" href="/landing/hero.webp" />
+        <style>
+          @font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:400 700;font-display:swap;src:url('/landing/jakarta.woff2') format('woff2')}
+          body{margin:0;background:#111513}#root{min-height:100vh}
+          .lp{color:#f5f5ee;font-family:'Plus Jakarta Sans',sans-serif}
+          .lp-wrap{width:min(1240px,calc(100% - 96px));margin-inline:auto}
+          .lp-header{background:#111513;border-bottom:1px solid #ffffff12}
+          .lp-header .lp-wrap{display:flex;align-items:center;justify-content:space-between;min-height:96px}
+          .lp-hero{position:relative;isolation:isolate;overflow:hidden;background:#111513}
+          .lp-hero-art{position:absolute;z-index:-1;inset:0 0 auto auto;width:100%;height:100%;object-fit:cover}
+          .lp-hero-inner{padding-top:54px;padding-bottom:51px}.lp-hero h1{font-size:66px;line-height:1.12;margin:0}
+          @media(max-width:540px){.lp-wrap{width:calc(100% - 40px)}.lp-header .lp-wrap{min-height:75px}.lp-hero h1{font-size:44px}.lp-hero-inner{padding-top:28px;padding-bottom:29px}}
+        </style>
         <!--
         manifest.json provides metadata used when your web app is installed on a
         user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
@@ -21,10 +32,16 @@
         work correctly both with client-side routing and a non-root public URL.
         Learn how to configure a non-root public URL by running `npm run build`.
         -->
-        <title>Emergent | Fullstack App</title>
+        <title>Data Analytics Course — ₹1,299 | Mera Mentor</title>
         <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
-        <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
-        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+        <script defer src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
+        <script>
+          if (!/^\/courses\/data-analytics\/?$/.test(location.pathname)) {
+            var checkout = document.createElement('script');
+            checkout.src = 'https://checkout.razorpay.com/v1/checkout.js'; checkout.async = true;
+            document.head.appendChild(checkout);
+          }
+        </script>
         <!--
         These two scripts have been added for the Visual Edits, please do not edit or remove them
         -->
@@ -124,7 +141,7 @@
                     }),
                     (e.__SV = 1));
             })(document, window.posthog || []);
-            posthog.init("phc_xAvL2Iq4tFmANRE7kzbKwaSqp1HJjN7x48s3vr0CMjs", {
+            if (!/^\/courses\/data-analytics\/?$/.test(location.pathname)) posthog.init("phc_xAvL2Iq4tFmANRE7kzbKwaSqp1HJjN7x48s3vr0CMjs", {
                 api_host: "https://us.i.posthog.com",
                 person_profiles: "identified_only", // or 'always' to create profiles for anonymous users as well,
                 session_recording: {

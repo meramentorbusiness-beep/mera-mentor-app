@@ -7,6 +7,8 @@ import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
+from typing import Literal
+from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -19,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lib.database import get_db
 from models.models import User, UserSession
+from routes.landing import record_event
 
 router = APIRouter(prefix="/api/auth/google", tags=["google-auth"])
 
@@ -47,14 +50,19 @@ def _generate_referral_code() -> str:
 
 
 @router.get("/login")
-async def google_login(ref: str | None = Query(default=None, max_length=100)):
+async def google_login(ref: str | None = Query(default=None, max_length=100),
+                       visitor_id: UUID | None = None,
+                       browser_type: Literal["instagram", "facebook", "browser"] = "browser",
+                       intent: Literal["signup", "purchase"] = "signup"):
     """Redirect the user to Google's consent screen."""
     client_id = _env("GOOGLE_CLIENT_ID")
     redirect_uri = _env("GOOGLE_REDIRECT_URI")
     ref = ref.strip() if ref else None
 
     nonce = secrets.token_urlsafe(32)
-    state = _serializer().dumps({"nonce": nonce, "ref": ref})
+    state = _serializer().dumps({"nonce": nonce, "ref": ref,
+        "visitor_id": str(visitor_id) if visitor_id else None,
+        "browser_type": browser_type, "intent": intent})
 
     params = {
         "client_id": client_id,
@@ -91,11 +99,12 @@ async def google_callback(
     db: AsyncSession = Depends(get_db),
 ):
     """Handle Google's redirect: exchange code, verify id_token, issue session cookie."""
-    frontend_url = os.environ.get("FRONTEND_URL", "").rstrip("/") or None
-    login_url = f"{frontend_url}/login" if frontend_url else "/login"
+    # REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+    frontend_url = _env("FRONTEND_URL").rstrip("/")
+    login_url = f"{frontend_url}/courses/data-analytics"
 
     if error:
-        return RedirectResponse(f"{login_url}?auth_error={error}", status_code=302)
+        return RedirectResponse(f"{login_url}?{urlencode({'auth_error': error})}", status_code=302)
     if not code or not state:
         raise HTTPException(400, "Missing Google authorization code or state")
 
@@ -142,6 +151,8 @@ async def google_callback(
 
     if claims.get("aud") != client_id:
         raise HTTPException(400, "Invalid Google token audience")
+    if not secrets.compare_digest(str(claims.get("nonce", "")), str(state_data.get("nonce", ""))):
+        raise HTTPException(400, "Invalid Google token nonce")
     if claims.get("iss") not in {"accounts.google.com", "https://accounts.google.com"}:
         raise HTTPException(400, "Invalid Google token issuer")
     if not claims.get("email") or not claims.get("sub"):
@@ -167,7 +178,8 @@ async def google_callback(
         e.strip() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()
     ]
 
-    if user is None:
+    is_new_user = user is None
+    if is_new_user:
         # New user — build referral chain from state
         referral_chain: list[str] = []
         referred_by_id: str | None = None
@@ -190,6 +202,7 @@ async def google_callback(
             referral_code=_generate_referral_code(),
             referred_by_id=referred_by_id,
             referral_chain=referral_chain,
+            email_verified=True,
             role="admin" if email in admin_emails else "user",
         )
         db.add(user)
@@ -210,10 +223,21 @@ async def google_callback(
         user_id=str(user.id),
         expires_at=expires_at,
     ))
+    if is_new_user and state_data.get("visitor_id"):
+        await record_event(db, event_id=f"signup:{user.id}", visitor_id=state_data["visitor_id"],
+            event="signup_completed", browser_type=state_data.get("browser_type", "browser"),
+            referral_code=state_data.get("ref"))
     await db.commit()
 
     # 6) Redirect back to the frontend with cookie
-    dashboard_url = f"{frontend_url}/dashboard" if frontend_url else "/dashboard"
+    dashboard_url = f"{frontend_url}/dashboard"
+    if state_data.get("intent") == "purchase":
+        query = {"checkout": "1", "source_browser": state_data.get("browser_type", "browser")}
+        if state_data.get("visitor_id"):
+            query["visitor"] = state_data["visitor_id"]
+        if state_data.get("ref"):
+            query["ref"] = state_data["ref"]
+        dashboard_url = f"{frontend_url}/courses/data-analytics?{urlencode(query)}#pricing"
     resp = RedirectResponse(dashboard_url, status_code=302)
     resp.delete_cookie("google_oauth_state", path="/api/auth/google")
     resp.set_cookie(

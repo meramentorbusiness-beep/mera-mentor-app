@@ -22,7 +22,7 @@ from lib.database import get_db, init_db, close_db, async_session_maker
 from models.models import (
     User, UserSession, Course, Lesson, Resource, Purchase, Commission,
     Payout, CourseProgress, Certificate, Quiz, QuizAttempt, Review,
-    Coupon, Notification, MediaAccessLog, EmailLog, Media, Category,
+    Coupon, Notification, MediaAccessLog, EmailLog, Media, Category, LandingPage,
     PurchaseStatus, CommissionStatus, PayoutStatus
 )
 
@@ -31,7 +31,7 @@ app = FastAPI(title="Mera Mentor API", version="2.0.0")
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[os.environ["FRONTEND_URL"].rstrip("/")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -201,6 +201,15 @@ async def logout(request: Request, response: Response, db: AsyncSession = Depend
 
 # ========== Courses Routes ==========
 
+@api_router.get("/admin/courses")
+async def get_admin_courses(admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    courses = (await db.execute(select(Course).options(selectinload(Course.lessons))
+                               .order_by(Course.created_at.desc()))).scalars().all()
+    return [{"course_id": c.course_id, "title": c.title, "description": c.description,
+             "price": c.price, "original_price": c.original_price, "image": c.image,
+             "category": c.category, "tier": c.tier, "is_upsell": c.is_upsell,
+             "published": c.published, "lesson_count": len(c.lessons)} for c in courses]
+
 @api_router.get("/purchases")
 async def get_my_purchases(user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Return the current user's purchases (course_id is the public string ID)."""
@@ -241,7 +250,7 @@ async def get_courses(db: AsyncSession = Depends(get_db)):
         lesson_count = result.scalar() or 0
         
         # Get average rating
-        stmt = select(func.avg(Review.rating)).where(Review.course_id == c.id)
+        stmt = select(func.avg(Review.rating)).where(Review.course_id == c.id, Review.is_landing == False)
         result = await db.execute(stmt)
         avg_rating = result.scalar() or 0
         
@@ -291,6 +300,9 @@ async def get_course(course_id: str, db: AsyncSession = Depends(get_db)):
         "image": course.image,
         "category": course.category,
         "tier": course.tier,
+        "published": course.published,
+        "is_upsell": course.is_upsell,
+        "upsell_for": course.upsell_for,
         "lessons": [
             {
                 "lesson_id": l.lesson_id,
@@ -1196,9 +1208,35 @@ async def get_streaks(user: dict = Depends(get_current_user), db: AsyncSession =
 
 # ========== Payments Routes ==========
 
+def _valid_visitor(value):
+    try:
+        uuid.UUID(str(value))
+        return True
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+
+async def _commission_base(db, course, amount):
+    page = await db.get(LandingPage, "data-analytics")
+    if page and page.settings.get("course_id") == course.course_id:
+        # The landing program pays commissions on the ₹1,101 pre-tax base.
+        return round(1101 * amount / 1299, 2)
+    return amount
+
+
+async def _track_purchase(db, purchase):
+    if purchase.landing_visitor_id:
+        from routes.landing import record_event
+        await record_event(db, event_id=f"purchase:{purchase.id}",
+            visitor_id=purchase.landing_visitor_id, event="purchase_completed",
+            browser_type=purchase.landing_browser_type or "browser",
+            details={"amount": purchase.amount})
+
 @api_router.post("/payments/create-order")
 async def create_payment_order(request: Request, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Create Razorpay payment order"""
+    if not razorpay_client:
+        raise HTTPException(503, "Payments are temporarily unavailable")
     body = await request.json()
     course_id = body.get("course_id")
     coupon_code = body.get("coupon_code")
@@ -1208,8 +1246,8 @@ async def create_payment_order(request: Request, user: dict = Depends(get_curren
     result = await db.execute(stmt)
     course = result.scalar_one_or_none()
 
-    if not course:
-        raise HTTPException(status_code=404, detail="Course not found")
+    if not course or not course.published:
+        raise HTTPException(status_code=404, detail="Course is not open for enrollment")
 
     # Check if already purchased
     stmt = select(Purchase).where(
@@ -1242,12 +1280,12 @@ async def create_payment_order(request: Request, user: dict = Depends(get_curren
     stmt = select(Purchase).where(
         Purchase.user_id == user["user_id"],
         Purchase.course_id == course.id,
-        Purchase.status == PurchaseStatus.PENDING.value,
+        Purchase.status.in_([PurchaseStatus.PENDING.value, PurchaseStatus.FAILED.value]),
     )
     result = await db.execute(stmt)
     pending = result.scalar_one_or_none()
 
-    if pending and pending.razorpay_order_id:
+    if pending and pending.status == PurchaseStatus.PENDING.value and pending.razorpay_order_id:
         return {
             "order_id": pending.razorpay_order_id,
             "amount": pending.amount,
@@ -1272,12 +1310,8 @@ async def create_payment_order(request: Request, user: dict = Depends(get_curren
             order_id = rz_order["id"]
         except Exception as e:
             raise HTTPException(status_code=502, detail=f"Razorpay error: {str(e)}")
-    else:
-        # Demo mode — no real keys configured
-        order_id = f"order_{uuid.uuid4().hex[:16]}"
-
     # Save pending purchase
-    purchase = Purchase(
+    purchase_data = dict(
         purchase_id=receipt,
         user_id=user["user_id"],
         course_id=course.id,
@@ -1286,9 +1320,19 @@ async def create_payment_order(request: Request, user: dict = Depends(get_curren
         discount_amount=discount,
         coupon_code=coupon_code,
         razorpay_order_id=order_id,
+        landing_visitor_id=str(uuid.UUID(body["visitor_id"])) if body.get("visitor_id") and _valid_visitor(body["visitor_id"]) else None,
+        landing_browser_type=body.get("browser_type") if body.get("browser_type") in {"instagram", "facebook", "browser"} else "browser",
         status=PurchaseStatus.PENDING.value,
     )
-    db.add(purchase)
+    if pending:
+        purchase = pending
+        for key, value in purchase_data.items():
+            setattr(purchase, key, value)
+        purchase.razorpay_payment_id = None
+        purchase.razorpay_signature = None
+    else:
+        purchase = Purchase(**purchase_data)
+        db.add(purchase)
     await db.commit()
 
     return {
@@ -1306,13 +1350,18 @@ async def create_payment_order(request: Request, user: dict = Depends(get_curren
 @api_router.post("/payments/verify")
 async def verify_payment(request: Request, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Verify Razorpay payment signature and complete purchase"""
+    if not razorpay_client:
+        raise HTTPException(503, "Payments are temporarily unavailable")
     body = await request.json()
     order_id   = body.get("razorpay_order_id")
     payment_id = body.get("razorpay_payment_id", "")
     signature  = body.get("razorpay_signature", "")
+    if not all(isinstance(value, str) and value for value in [order_id, payment_id, signature]):
+        raise HTTPException(400, "Complete payment verification details are required")
 
     # Find purchase
-    stmt = select(Purchase).where(Purchase.razorpay_order_id == order_id)
+    stmt = select(Purchase).where(Purchase.razorpay_order_id == order_id,
+                                  Purchase.user_id == user["user_id"]).with_for_update()
     result = await db.execute(stmt)
     purchase = result.scalar_one_or_none()
 
@@ -1322,16 +1371,20 @@ async def verify_payment(request: Request, user: dict = Depends(get_current_user
     if purchase.status == PurchaseStatus.COMPLETED.value:
         return {"message": "Already completed", "purchase_id": purchase.purchase_id}
 
-    # Signature verification (only when real keys are configured)
-    if razorpay_client and signature:
-        try:
-            razorpay_client.utility.verify_payment_signature({
-                "razorpay_order_id": order_id,
-                "razorpay_payment_id": payment_id,
-                "razorpay_signature": signature,
-            })
-        except razorpay.errors.SignatureVerificationError:
-            raise HTTPException(status_code=400, detail="Invalid payment signature")
+    try:
+        razorpay_client.utility.verify_payment_signature({
+            "razorpay_order_id": order_id, "razorpay_payment_id": payment_id, "razorpay_signature": signature,
+        })
+    except razorpay.errors.SignatureVerificationError:
+        raise HTTPException(status_code=400, detail="Invalid payment signature")
+    try:
+        provider_payment = await asyncio.to_thread(razorpay_client.payment.fetch, payment_id)
+    except Exception:
+        raise HTTPException(502, "Payment confirmation is unavailable. Please contact support before paying again.")
+    if (provider_payment.get("order_id") != order_id or provider_payment.get("currency") != "INR"
+            or provider_payment.get("amount") != round(purchase.amount * 100)
+            or provider_payment.get("status") != "captured"):
+        raise HTTPException(400, "Payment is not captured or does not match the order")
 
     # Mark completed
     purchase.status = PurchaseStatus.COMPLETED.value
@@ -1345,7 +1398,8 @@ async def verify_payment(request: Request, user: dict = Depends(get_current_user
 
     # Process commissions
     if course:
-        await process_commissions(db, str(purchase.id), user["user_id"], purchase.amount, course.title)
+        await process_commissions(db, str(purchase.id), user["user_id"], await _commission_base(db, course, purchase.amount), course.title)
+    await _track_purchase(db, purchase)
 
     # Award XP
     await add_xp(db, user["user_id"], 50, "Purchased course")
@@ -1367,8 +1421,12 @@ async def verify_payment(request: Request, user: dict = Depends(get_current_user
 @api_router.post("/payments/webhook")
 async def razorpay_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     """Razorpay webhook handler with signature verification"""
+    if not razorpay_client or not RAZORPAY_WEBHOOK_SECRET:
+        raise HTTPException(503, "Payment webhook is not configured")
     payload = await request.body()
     signature = request.headers.get("X-Razorpay-Signature", "")
+    if not signature:
+        raise HTTPException(400, "Webhook signature is required")
 
     if RAZORPAY_WEBHOOK_SECRET and signature:
         try:
@@ -1391,11 +1449,13 @@ async def razorpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
         payment_id = payment.get("id")
 
         if order_id:
-            stmt = select(Purchase).where(Purchase.razorpay_order_id == order_id)
+            stmt = select(Purchase).where(Purchase.razorpay_order_id == order_id).with_for_update()
             result = await db.execute(stmt)
             purchase = result.scalar_one_or_none()
 
             if purchase and purchase.status != PurchaseStatus.COMPLETED.value:
+                if payment.get("currency") != "INR" or payment.get("amount") != round(purchase.amount * 100):
+                    raise HTTPException(400, "Payment amount does not match order")
                 purchase.status = PurchaseStatus.COMPLETED.value
                 purchase.razorpay_payment_id = payment_id
                 purchase.completed_at = datetime.now(timezone.utc)
@@ -1405,7 +1465,8 @@ async def razorpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 course = result.scalar_one_or_none()
 
                 if course:
-                    await process_commissions(db, str(purchase.id), purchase.user_id, purchase.amount, course.title)
+                    await process_commissions(db, str(purchase.id), purchase.user_id, await _commission_base(db, course, purchase.amount), course.title)
+                await _track_purchase(db, purchase)
 
                 await db.commit()
 
@@ -2066,6 +2127,8 @@ app.include_router(api_router)
 # Google OAuth 2.0 (real Google Cloud credentials, no third-party broker)
 from routes.google_auth import router as google_auth_router
 app.include_router(google_auth_router)
+from routes.landing import create_landing_router
+app.include_router(create_landing_router(require_admin))
 
 # ========== Serve React Frontend (production) ==========
 
@@ -2076,6 +2139,8 @@ if STATIC_BUILD_DIR.exists():
     react_assets = STATIC_BUILD_DIR / "static"
     if react_assets.exists():
         app.mount("/static", StaticFiles(directory=str(react_assets)), name="react-assets")
+    if (STATIC_BUILD_DIR / "landing").exists():
+        app.mount("/landing", StaticFiles(directory=str(STATIC_BUILD_DIR / "landing")), name="landing-assets")
 
     @app.get("/{full_path:path}")
     async def serve_react_spa(full_path: str):
@@ -2090,7 +2155,12 @@ if STATIC_BUILD_DIR.exists():
 @app.on_event("startup")
 async def startup():
     """Initialize database and storage on startup"""
+    from services.preview_database import ensure_preview_database
+    await ensure_preview_database()
     await init_db()
+    from services.landing_seed import initialize_landing
+    async with async_session_maker() as db:
+        await initialize_landing(db)
     
     # Run lightweight migrations for new columns on existing tables
     try:

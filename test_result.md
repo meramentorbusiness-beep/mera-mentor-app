@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Add quiz/test creation in admin portal (MCQ, auto-grading) + folder/category management for courses."
+user_problem_statement: "Build /courses/data-analytics: fast public Mera Mentor ₹1299 landing page with Instagram browser handling (no OTP per latest user), Superprofile webinar CTAs, Google OAuth, referral and salary calculators, sample review CRUD, editable seats, analytics and secure existing checkout. Earlier quiz/category testing remains separate backlog."
 
 backend:
   - task: "Update course saves resources"
@@ -198,11 +198,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Quiz CRUD admin routes"
-    - "Quiz auto-grading submission"
-    - "Category CRUD routes"
-    - "Admin quiz management tab"
-    - "Category management in admin settings"
+    - "Landing review/admin/analytics regression (iteration8 15/15 passing)"
+    - "Google callback allowlisting recheck after user confirmation"
+    - "Referral cleanup with in-app browser handoff preserved"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -210,3 +208,10 @@ test_plan:
 agent_communication:
     - agent: "main"
       message: "Implemented quiz management (admin CRUD + student auto-grading) and category management. Reused existing Quiz/QuizAttempt models, added 3 new columns. Created new Category model. Added startup migration for new columns + default category seeding. Backend cannot be tested locally due to missing Supabase DATABASE_URL."
+
+    - agent: "testing"
+      message: "Iteration 8 completed on external preview. Backend: added/ran /app/backend/tests/test_landing_iteration8_regression.py (15 passed, junit at /app/test_reports/pytest/pytest_iteration8.xml). Verified landing/admin APIs, analytics dedupe, auth state checks, draft checkout protection, temporary published-course retry + cross-user verify guard, webhook 503 when secret absent. Frontend: validated landing flows across widths 320/375/390/428/768/1024/1440 (no horizontal overflow), sticky CTA behavior, calculators, accordions, legal dialogs, in-app browser modal/ref-sharing URL, admin landing tab CRUD UI. Build evidence: main.js 97.74kB gzip, main.css 8.08kB gzip. Measured domContentLoaded ≈528ms (single run). Issues: Google OAuth ends in redirect_uri_mismatch, hidden 1x1 iframe present on landing, referral query not cleaned after persistence."
+    - agent: "main"
+      message: "Follow-up: clean page inspection has ZERO iframe elements and only application bundle, platform support script and hosting-injected Cloudflare beacon; no application iframe/video code. Original intermittent 1x1 frame appears hosting-layer related, not reproducible in direct reload. No attempt to remove external browser/security frames. Referral query cleanup added for regular browsers ONLY after successful localStorage persistence; retain ref in in-app URL so native Open in Browser does not lose attribution. User confirmed exact Google callback was added to client allowlist; rechecking entry flow. Existing quiz/category items above remain unverified backlog, not new landing regressions."
+    - agent: "main"
+      message: "Final verification 2026-09-21: user-authorized callback now accepted by Google; real Sign in with Google form confirmed, full human consent not performed. Regular referral URL cleanup and reload retention PASS; Instagram ref URL retained and copied handoff carries ref/visitor/source_browser PASS; zero video and zero iframe on clean load. Hosting error HTML explicitly showed Cloudflare-injected 1x1 challenge iframe (not app media). After inactivity local PostgreSQL system config reset; added opt-in persistent preview bootstrap, recovered existing DB (health200), then reran existing pytest suite:15/15PASS, /app/test_reports/pytest/pytest_iteration8_final.xml. Final production build PASS, mainJS97.78KB gzip,CSS8.08KB. Landing course remains draft until real content is linked/published; RazorpayTEST orders verified but no captured payment performed. No runtime APIs mocked."

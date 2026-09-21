@@ -1,147 +1,356 @@
 {
-  "project_name": "CourseReferral_Dashboard_E1",
-  "design_philosophy": {
-    "identity": "The Anti-AI Designer",
-    "core_principles": [
-      "Fusion over Imitation: Mix Luxury Fintech (Gold/Purple) with EdTech (Clean/White).",
-      "Emotion First: The dashboard should feel 'Lucrative' and 'Progressive'.",
-      "Content is King: Data (Earnings) is the hero. Make numbers big and beautiful.",
-      "Negative Space: Use whitespace to separate 'Earning' areas from 'Learning' areas."
-    ],
-    "anti_patterns": [
-      "No default Shadcn cards (must have custom shadows).",
-      "No generic 'Inter' font for headings.",
-      "No flat gradients (use noise/texture).",
-      "No clutter (hide low-priority actions in dropdowns)."
-    ]
+  "project_title": "Mera Mentor - Data Analytics Course Standalone Landing Page (/courses/data-analytics)",
+  "design_vision": "High-converting, ultra-fast mobile landing page engineered specifically for Instagram in-app browser traffic on cellular networks. Blends deep obsidian and dark graphite canvas with electric brand neon-amber/orange (#FF6B00 and #FF8A00) accents, Instagram-native pill shapes, high APCA contrast ratios, and authentic Hinglish storytelling tailored to non-coder aspirants.",
+  "target_audience": "Tier 1 & Tier 2 Indian freshers, non-tech graduates (B.Com, B.A, B.Sc, non-CS engineers), and working professionals stuck in ₹15-25k/month jobs aiming to transition to Data Analyst roles (₹4-8 LPA) without prior programming experience.",
+  "core_context": "MARKETING_PAGE_MOBILE_FIRST",
+  "theme_protocol": {
+    "theme_mode": "DARK_PRIMARY_WITH_HIGH_CONTRAST_CARDS",
+    "background_base": "#0B0D12",
+    "background_card_surface": "#121620",
+    "background_card_interactive": "#181E2B",
+    "border_subtle": "rgba(255, 255, 255, 0.08)",
+    "border_highlight": "rgba(255, 107, 0, 0.35)",
+    "brand_primary_orange": "#FF6B00",
+    "brand_hover_orange": "#FF8533",
+    "brand_glow_orange": "rgba(255, 107, 0, 0.22)",
+    "accent_emerald_gain": "#10B981",
+    "accent_emerald_bg": "rgba(16, 185, 129, 0.12)",
+    "text_headline": "#FFFFFF",
+    "text_body": "#E2E8F0",
+    "text_muted": "#94A3B8",
+    "text_amber_spark": "#FDBA74",
+    "cta_gradient": "linear-gradient(135deg, #FF6B00 0%, #FF8A00 100%)"
   },
   "typography": {
-    "font_family": {
-      "headings": "Plus Jakarta Sans, sans-serif",
-      "body": "Inter, sans-serif",
-      "numbers": "Manrope, monospace"
-    },
+    "font_family_primary": "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
+    "font_family_mono": "'JetBrains Mono', ui-monospace, monospace",
+    "weights_used": [400, 600, 700, 800],
+    "anti_ai_rule": "Strict prohibition on default Inter. Use Plus Jakarta Sans for aggressive modern athletic legibility with tight kerning. Headlines use tracking-tight and leading-tight. Badges & overlines use uppercase JetBrains Mono with tracking-[0.2em].",
     "scale": {
-      "h1": "text-4xl md:text-5xl font-bold tracking-tight",
-      "h2": "text-3xl font-semibold tracking-tight",
-      "h3": "text-2xl font-semibold",
-      "stat_value": "text-4xl font-extrabold tracking-tighter text-foreground",
-      "stat_label": "text-sm font-medium text-muted-foreground uppercase tracking-widest",
-      "body_large": "text-lg leading-relaxed",
-      "body_base": "text-base leading-normal",
-      "caption": "text-sm text-muted-foreground"
+      "h1_hero": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.15]",
+      "h2_section": "text-2xl sm:text-3xl font-bold tracking-tight leading-snug",
+      "h3_card": "text-lg sm:text-xl font-bold text-white",
+      "h4_sub": "text-base font-semibold text-slate-200",
+      "body": "text-base sm:text-base leading-relaxed text-slate-300",
+      "caption": "text-xs sm:text-sm font-medium text-slate-400"
+    }
+  },
+  "layout_and_spacing": {
+    "max_width_container": "max-w-xl mx-auto px-4 sm:px-6",
+    "desktop_adaptive_container": "lg:max-w-3xl xl:max-w-4xl",
+    "spacing_scale": {
+      "section_y_padding": "py-12 sm:py-16",
+      "card_internal_padding": "p-5 sm:p-6",
+      "gap_cards": "gap-4 sm:gap-6",
+      "button_min_height": "min-h-[52px]",
+      "touch_target_rule": "Strict 48px+ tap target across all mobile interactions"
+    }
+  },
+  "critical_instagram_webview_architecture": {
+    "detection_code": "const isInstagramWebView = () => { if (typeof window === 'undefined') return false; const ua = window.navigator.userAgent || window.navigator.vendor || ''; return /Instagram|FBAN|FBAV/i.test(ua); }",
+    "sticky_top_banner": {
+      "visible_condition": "isInAppBrowser === true",
+      "content": "📱 Best experience ke liye tap karein ⋮ (top right) → 'Open in Chrome/Browser'",
+      "styling": "sticky top-0 z-50 bg-[#1E1408] border-b border-[#FF6B00]/40 text-[#FED7AA] text-xs sm:text-sm font-medium py-2.5 px-4 text-center shadow-lg backdrop-blur-md",
+      "test_id": "instagram-webview-banner"
     },
-    "usage_rules": [
-      "Use 'Manrope' specifically for all currency and commission percentage values.",
-      "Use 'Plus Jakarta Sans' for Page Titles and Section Headers.",
-      "Use 'Inter' for long-form text and instructions."
+    "signup_flow_split": {
+      "instagram_webview_behavior": "Prioritize direct frictionless In-App Webinar Form (Name + WhatsApp Number + Current City/Role) without forcing external Google OAuth redirect which drops cookies in Instagram sandbox. Provide high-visibility 'Open in External Browser' secondary action button for users wanting Google Login.",
+      "regular_browser_behavior": "Prominent 'Continue with Google' button as primary instant frictionless entry, alongside the Webinar Registration modal."
+    },
+    "speed_optimization_constraints": {
+      "target_lcp": "< 1.5s on 4G cellular",
+      "video_ban": "Zero <video> tags, zero iframe embeds (YouTube/Vimeo). 100% forbidden.",
+      "image_payload": "Static lightweight WebP/SVG representations only. Hero illustration under 120KB. Below-fold assets lazily loaded with loading='lazy'.",
+      "css_only_motion": "All counters, shimmer pulses, and accordion transitions run purely on hardware-accelerated CSS (transform/opacity). No heavy Framer Motion or GSAP imported on this route."
+    }
+  },
+  "route_and_file_structure": {
+    "page_route": "/courses/data-analytics",
+    "entry_component_path": "/app/frontend/src/pages/DataAnalyticsLandingPage.js",
+    "component_modules": [
+      "/app/frontend/src/components/landing/WebviewBanner.js",
+      "/app/frontend/src/components/landing/HeroSection.js",
+      "/app/frontend/src/components/landing/PainPointsSection.js",
+      "/app/frontend/src/components/landing/CurriculumStackSection.js",
+      "/app/frontend/src/components/landing/RoiSalaryCalculator.js",
+      "/app/frontend/src/components/landing/ReferralEarningsCalculator.js",
+      "/app/frontend/src/components/landing/CurriculumAccordion.js",
+      "/app/frontend/src/components/landing/ReviewsCarousel.js",
+      "/app/frontend/src/components/landing/InstructorCredibility.js",
+      "/app/frontend/src/components/landing/PricingCheckoutCard.js",
+      "/app/frontend/src/components/landing/FaqAccordion.js",
+      "/app/frontend/src/components/landing/StickyBottomBar.js",
+      "/app/frontend/src/components/landing/WebinarRegistrationModal.js",
+      "/app/frontend/src/components/landing/AdminReviewManagerModal.js"
     ]
   },
-  "colors": {
-    "palette": {
-      "primary": {
-        "DEFAULT": "#4F46E5",
-        "foreground": "#FFFFFF",
-        "dark": "#3730A3",
-        "light": "#818CF8"
+  "sections_breakdown": {
+    "section_1_hero": {
+      "headline": "6 Mahine Mein Data Analyst Ban Jao, Bina Coding Background Ke",
+      "subheadline": "College students aur non-tech professionals ke liye practical step-by-step masterclass. Excel se lekar AI tools tak sab kuch sikhein aur ₹4-8 LPA career shuru karein.",
+      "ctas": {
+        "primary": "🎓 Free Webinar Join Karo",
+        "secondary": "Course Dekho — ₹1,299 (Scroll to Price)"
       },
-      "secondary": {
-        "DEFAULT": "#F59E0B",
-        "foreground": "#FFFFFF",
-        "dark": "#B45309",
-        "light": "#FCD34D"
+      "trust_badges": [
+        "500+ Students Mentored",
+        "4.8★ Avg Rating",
+        "100% Job Ready Skills",
+        "Lifetime Portal Access"
+      ],
+      "hero_visual": "SVG tech dashboard vector graphic with glowing orange gridlines, database nodes, and metric cards representing Excel, SQL, Power BI, and AI."
+    },
+    "section_2_problem_agitation": {
+      "headline": "Yeh Problems Aapko Bhi Pareshan Kar Rahi Hain?",
+      "pain_cards": [
+        {
+          "emoji": "💼",
+          "title": "Naukri nahi mil rahi?",
+          "desc": "General degrees (BA/BCom/BSc/non-CS) par freshers ko shortlisted tak nahi kiya jaata bina technical edge ke."
+        },
+        {
+          "emoji": "📉",
+          "title": "Skills purane ho gaye?",
+          "desc": "Sirf basic computer aur data entry se career growth ruk chuki hai, industry high-demand analytics maangti hai."
+        },
+        {
+          "emoji": "🛑",
+          "title": "Salary badhna band ho gaya?",
+          "desc": "₹15,000–₹20,000 ki monthly salary par saalo tak phasne se accha hai high-paying high-demand data analyst skill seekhein."
+        }
+      ]
+    },
+    "section_3_tech_stack_cards": {
+      "headline": "Hum Fluff Cut Kar Rahe Hain. Yeh Hai Exact Tech Stack Jo Aapko 2026 Mein Job Dilayega:",
+      "cards": [
+        {
+          "step": "01",
+          "tag": "📊 The Foundation",
+          "title": "Advanced Excel & Data Cleaning",
+          "desc": "Jahan 80% kaam hota hai. VLOOKUP, XLOOKUP, Pivot Tables, power query aur automated data workflows.",
+          "badge": "Core Skill"
+        },
+        {
+          "step": "02",
+          "tag": "🗄️ The Backbone",
+          "title": "SQL – Databases Se Baat Karna",
+          "desc": "Relational databases se multi-table data extract, join, aggregate aur filter karna seekho like a pro.",
+          "badge": "Highest Demand"
+        },
+        {
+          "step": "03",
+          "tag": "📈 The Story",
+          "title": "Power BI & Interactive Dashboards",
+          "desc": "Dashboards banao jo business stakeholders aur managers ek nazar mein samajh sakein.",
+          "badge": "Visual Impact"
+        },
+        {
+          "step": "04",
+          "tag": "🤖 The AI Advantage",
+          "title": "ChatGPT & AI Tools Automation",
+          "desc": "ChatGPT aur generative AI tools se apna SQL query writing aur formula analysis 10x fast automate karna. Yeh skill aapko irreplaceable banayega.",
+          "badge": "2026 Future Proof"
+        },
+        {
+          "step": "05",
+          "tag": "💼 The Job Hunt",
+          "title": "Resume Hacks & Interview Prep",
+          "desc": "Specially freshers ke liye customized portfolio projects, ATS resume format, aur real interview questions cracking.",
+          "badge": "Placement Edge"
+        }
+      ]
+    },
+    "section_4_roi_career_calculator": {
+      "headline": "Course Investment vs Career Return",
+      "comparison_box": {
+        "course_fee": "₹1,299 (One-Time)",
+        "avg_salary": "₹4,00,000 - ₹8,00,000 LPA",
+        "roi_highlight": "ROI: 300x - 600x in Year 1"
       },
-      "background": "#F8FAFC",
-      "surface": "#FFFFFF",
-      "header_bg": "#0F172A",
-      "success": "#10B981",
-      "warning": "#F59E0B",
-      "error": "#EF4444"
+      "before_after_matrix": {
+        "before": {
+          "title": "Before Course",
+          "points": ["No data skills", "₹15,000 - ₹20,000/month", "No job security"]
+        },
+        "after": {
+          "title": "After Course",
+          "points": ["Certified Data Analyst", "₹35,000 - ₹70,000/month", "High demand future-proof career"]
+        }
+      },
+      "interactive_calculator": {
+        "slider_label": "Aapki Current Monthly Salary (₹)",
+        "min": 10000,
+        "max": 60000,
+        "step": 5000,
+        "default": 18000,
+        "logic": "Target starting analyst salary is ₹42,000/mo (approx ₹5 LPA). Monthly potential gain = Math.max(10000, 42000 - currentSalary). Daily gain = potentialGain / 30. Payoff days = Math.ceil(1299 / dailyGain).",
+        "display_outputs": [
+          "Data Analyst Potential: +₹{monthlyGain.toLocaleString('en-IN')}/month extra",
+          "Course pays for itself in just {payoffDays} din of your new salary!"
+        ]
+      }
     },
-    "gradients": {
-      "header": "bg-gradient-to-r from-[#0F172A] via-[#1E293B] to-[#334155]",
-      "gold_text": "bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-yellow-600",
-      "card_hover": "hover:bg-gradient-to-br hover:from-white hover:to-slate-50"
+    "section_5_referral_roi_calculator": {
+      "headline": "Course Lo, Dosto Ko Batao, Kamao! 💸",
+      "subtitle": "Hamara 5-level transparent affiliate referral program jo aapke course ko 100% free bana sakta hai.",
+      "financial_constants": {
+        "mrp": 1299,
+        "gst_pct": 18,
+        "base_amount": 1101,
+        "levels": [
+          {"level": 1, "pct": 40, "amount": 440, "label": "Direct Referral (Level 1)"},
+          {"level": 2, "pct": 12, "amount": 132, "label": "Friends of Friends (Level 2)"},
+          {"level": 3, "pct": 6, "amount": 66, "label": "Level 3 Referrals"},
+          {"level": 4, "pct": 3, "amount": 33, "label": "Level 4 Referrals"},
+          {"level": 5, "pct": 1, "amount": 11, "label": "Level 5 Referrals"}
+        ]
+      },
+      "slider_config": {
+        "min": 1,
+        "max": 20,
+        "default": 5,
+        "step": 1
+      },
+      "view_toggle": ["Simple (Direct Only)", "Chain Effect (5-Level Growth)"],
+      "calculation_formula": {
+        "simple_earning": "count * 440",
+        "chain_earning": "(count * 440) + (count * 2 * 132) + (count * 2 * 2 * 66) + (count * 2 * 2 * 1 * 33) + (count * 2 * 2 * 1 * 1 * 11)",
+        "free_course_callout": "Course free ho sakta hai agar sirf 3 dost bhi join kar lein! (3 × ₹440 = ₹1,320 — covers ₹1,299 course)"
+      }
     },
-    "contrast_rules": [
-      "Header text must be Pure White (#FFFFFF) or Light Grey (#CBD5E1) against the dark header.",
-      "Card text must be Slate-900 (#0F172A) for readability.",
-      "Commission values should use the 'Secondary' (Gold/Amber) color to signify wealth."
+    "section_6_curriculum_breakdown": {
+      "headline": "Detailed Module Breakdown",
+      "modules": [
+        {"title": "Module 1: Data Analytics Foundations & Mindset", "duration": "2 Weeks", "status": "unlocked", "topics": ["What Analysts actually do", "Analytical thinking framework", "Data types and formats"]},
+        {"title": "Module 2: Advanced Excel for Data Analysis", "duration": "3 Weeks", "status": "unlocked", "topics": ["XLOOKUP & Index-Match masterclass", "Dynamic Pivot tables & Charts", "Data cleansing and automation"]},
+        {"title": "Module 3: SQL Database Mastery", "duration": "4 Weeks", "status": "unlocked", "topics": ["PostgreSQL / MySQL setup", "SELECT, WHERE, GROUP BY, HAVING", "Joins (INNER, LEFT, RIGHT, FULL)", "Subqueries and Window Functions"]},
+        {"title": "Module 4: Business Intelligence with Power BI / Tableau", "duration": "3 Weeks", "status": "unlocked", "topics": ["Data modeling and DAX basics", "Executive KPI dashboard design", "Interactive storytelling with visuals"]},
+        {"title": "Module 5: Generative AI for Data Professionals", "duration": "2 Weeks", "status": "unlocked", "topics": ["ChatGPT for SQL debugging", "Automating Excel formulas via LLMs", "Python script generation without coding"]},
+        {"title": "Module 6: Capstone Industry Projects & ATS Resume", "duration": "2 Weeks", "status": "locked", "topics": ["E-commerce & FinTech real dataset capstone", "GitHub & portfolio presentation", "Mock technical interviews"]}
+      ]
+    },
+    "section_7_student_reviews_carousel": {
+      "headline": "500+ students, 4.8/5 average rating ⭐",
+      "disclaimer_label": "Sample reviews for demonstration — Editable via Admin Panel",
+      "swipe_behavior": "CSS scroll-snap-x mandatory with overflow-x-auto, no heavy slider packages, touch-friendly swipe with pagination dots",
+      "sample_reviews_count": 20,
+      "sample_reviews_dataset": [
+        {"id": 1, "name": "Rahul Verma", "rating": 5, "review": "Non-tech background tha, but SQL itna simply explain kiya ki 2 months mein pehla interview crack ho gaya!", "role": "Associate Analyst at Genpact"},
+        {"id": 2, "name": "Priya Sharma", "rating": 5, "review": "Best ₹1,299 investment! Excel ke shortcuts aur Power BI dashboard dekh kar interviewers bohot impress huye.", "role": "Junior Data Analyst at Swiggy"},
+        {"id": 3, "name": "Aman Gupta", "rating": 5, "review": "ChatGPT aur AI automation module game-changer hai. Jo query likhne mein 1 ghanta lagta tha, ab 5 min mein ho jaata hai.", "role": "Operations Analyst at Delhivery"},
+        {"id": 4, "name": "Sneha Patil", "rating": 5, "review": "Doubt solving support itna fast tha ki kabhi laga hi nahi ki online seekh rahi hoon. Recommended for all freshers!", "role": "BI Intern at Tech Mahindra"},
+        {"id": 5, "name": "Vikram Rathore", "rating": 5, "review": "B.Com graduate tha, salary ₹18k thi. Course complete karke ₹38k/month ka offer letter mila. Real industry knowledge!", "role": "Data Analyst at WNS"},
+        {"id": 6, "name": "Ananya Roy", "rating": 5, "review": "Power BI dashboard banane mein sabse zyada maza aaya. Live webinar sessions bohot interactive the.", "role": "Reporting Analyst at Infosys"},
+        {"id": 7, "name": "Karthik Nair", "rating": 5, "review": "Zero coding background, still understood SQL joins and CTEs in the first go. Top tier teaching style.", "role": "Business Analyst at Cognizant"},
+        {"id": 8, "name": "Pooja Deshmukh", "rating": 5, "review": "Maine 3 dosto ko refer kiya aur mera pura course free ho gaya! Paisa vasool and awesome learning.", "role": "Student"},
+        {"id": 9, "name": "Harshvardhan Singh", "rating": 5, "review": "Resume hacks helped me beat the ATS filter. Received 4 interview callbacks within 3 weeks of updating profile.", "role": "Data Specialist at Zomato"},
+        {"id": 10, "name": "Neha Joshi", "rating": 5, "review": "The real capstone project on e-commerce sales gave me genuine practical experience to discuss in rounds.", "role": "Data Analyst at Tata Digital"},
+        {"id": 11, "name": "Mohit Agarwal", "rating": 5, "review": "Excel advanced cleaning portion alone is worth more than ₹1,299. Daily office kaam 3x fast ho gaya.", "role": "Financial Analyst"},
+        {"id": 12, "name": "Deepika Iyer", "rating": 5, "review": "No unnecessary fluff! Sirf wahi sikhaya jo interview aur real job mein actually chahiye hota hai.", "role": "Associate at Accenture"},
+        {"id": 13, "name": "Rohan Mehra", "rating": 5, "review": "Live doubts clearing during weekly sessions made complex SQL subqueries feel like child's play.", "role": "Data Analyst Trainee"},
+        {"id": 14, "name": "Simran Kaur", "rating": 5, "review": "Confidence building was the biggest factor. Mock interviews boosted my morale significantly.", "role": "Junior BI Consultant"},
+        {"id": 15, "name": "Abhishek Dubey", "rating": 5, "review": "Value for money unmatched! Doosre institutes 40-50 hazar maang rahe the same cheez ke liye.", "role": "MIS Executive to Analyst"},
+        {"id": 16, "name": "Kavita Sahu", "rating": 5, "review": "Hinglish explanation makes concepts super easy to retain. Even after a 2-year career gap, I got hired.", "role": "Data Analyst"},
+        {"id": 17, "name": "Gaurav Bhatt", "rating": 5, "review": "SQL + Power BI combination is lethal in the job market. Cleared 2 rounds out of 3 easily.", "role": "Product Analyst at FinTech"},
+        {"id": 18, "name": "Ritu Srivastava", "rating": 5, "review": "Lifetime access means I can revise queries anytime before taking on new sprint tasks in my company.", "role": "Analytics Associate"},
+        {"id": 19, "name": "Manish Tiwari", "rating": 5, "review": "Sir explains with realistic corporate examples rather than theoretical textbook definitions.", "role": "Data Operations Lead"},
+        {"id": 20, "name": "Tanvi Saxena", "rating": 5, "review": "Hands down the best course for freshers looking for a high-trajectory career shift without learning hardcore C++ or Java.", "role": "Junior Data Analyst at HCL"}
+      ]
+    },
+    "section_8_instructor_credibility": {
+      "headline": "4+ Saal Ka Data Expert Aapko Padhayega — Real Industry Experience, Na Ki Sirf Theory",
+      "statement": "Data analytics mein kaam karne wale senior industry professionals dwara curated curriculum. Hamara mission hai har non-tech graduate ko job-ready banana.",
+      "points": [
+        "4+ Years hands-on corporate experience in FinTech & E-commerce analytics",
+        "Mentored over 500+ candidates who transitioned into tech roles",
+        "Practical focus on business problem-solving over dry syntax"
+      ]
+    },
+    "section_9_pricing_and_urgency": {
+      "fee_breakdown": "₹1,101 Base + 18% GST (₹198) = ₹1,299 All-inclusive",
+      "seat_counter_display": "Limited Seats: 37/50 filled (Batch closes soon)",
+      "whats_included_checklist": [
+        "✅ Lifetime access to full course modules & future updates",
+        "✅ Live interactive webinar & doubt solving sessions",
+        "✅ Verifiable Data Analyst Certificate on completion",
+        "✅ Taught by 4+ years experienced industry data expert",
+        "✅ Generative AI & ChatGPT tools automation training",
+        "✅ Resume builder hacks, ATS templates & interview prep"
+      ],
+      "payment_provider": "Secure payment via Razorpay (UPI, GPay, PhonePe, Paytm, Cards, Netbanking)",
+      "no_refund_policy_note": "Transparent Policy: Hum no-refund policy follow karte hain. Isliye webinar aur syllabus detail dekh kar hi apna thoughtful decision lein."
+    },
+    "section_10_faq_accordion": {
+      "faqs": [
+        {"q": "Kya refund milega agar course pasand nahi aaya?", "a": "Nahi, hum strict no-refund policy follow karte hain. Isliye pehle syllabus aur demo guidance dekh kar hi decision lein."},
+        {"q": "Course access kitne time tak milega?", "a": "Lifetime access — ek baar enroll karein, jab chaho revise karo, koi expiry nahi hai."},
+        {"q": "Kya certificate milega course complete karne par?", "a": "Haan, Data Analyst Certificate milega jo aap LinkedIn, resume aur job portals par showcase kar sakte hain."},
+        {"q": "Kya live classes bhi hongi ya sirf recorded videos?", "a": "Live webinar sessions included hain jahan aap directly doubts clear kar sakte hain, saath mein lifetime recorded content bhi milta hai."},
+        {"q": "Course kaun padha raha hai?", "a": "4+ years ka experienced industry data expert jo real high-scale corporate data projects pe kaam kar chuka hai, na ki sirf theory teacher."},
+        {"q": "Kya mujhe coding background chahiye is course ke liye?", "a": "Bilkul nahi, yeh course non-coders ke liye design kiya gaya hai. Excel se shuru karke SQL, Power BI aur AI tools tak sab step-by-step sikhaya jaayega."},
+        {"q": "Referral se kitna kama sakte hain?", "a": "Har direct referral par ₹440 aur multi-level network se up to 5 levels tak passive earning milti hai. Upar calculator se calculate karein."},
+        {"q": "Job placement ki guarantee hai?", "a": "Hum job-ready skills, resume hacks aur interview prep dete hain, lekin placement ki direct guarantee nahi de sakte — yeh aapki mehnat aur market performance pe depend karta hai."}
+      ]
+    },
+    "section_11_sticky_footer_cta": {
+      "mobile_sticky_bar": {
+        "visible_on_scroll": true,
+        "primary_action": "Free Webinar Join",
+        "secondary_action": "₹1,299 Buy Now",
+        "styling": "fixed bottom-0 left-0 right-0 z-50 p-3 bg-[#0B0D12]/95 border-t border-[#FF6B00]/30 backdrop-blur-md flex gap-2 max-w-lg mx-auto"
+      }
+    }
+  },
+  "technical_integrations": {
+    "referral_tracking": {
+      "logic": "Extract URL query parameter `?ref=XXXX` on initial mount. Store in localStorage key `mera_mentor_referral_code`. Pass automatically in webinar submission and attach to checkout meta/referredById."
+    },
+    "google_oauth_fallback": {
+      "strategy": "Show Google OAuth in regular mobile browser / desktop. In Instagram WebView, offer high-clarity warning to open in browser for one-tap Google Login, or use instant Webinar registration form natively."
+    },
+    "speed_tactics": {
+      "bundle_isolation": "Keep landing page route clean of heavy charting suites like recharts/d3 on critical path. Calculators use pure JS math with minimal state. Lucide icons imported individually. CSS animations powered by Tailwind.",
+      "font_optimization": "Single font family (Plus Jakarta Sans) loaded with standard weights 400, 600, 700."
+    }
+  },
+  "accessibility_and_testing": {
+    "data_testid_manifest": [
+      "instagram-webview-banner",
+      "open-in-browser-top-btn",
+      "hero-title",
+      "hero-webinar-cta",
+      "hero-pricing-cta",
+      "salary-slider-input",
+      "salary-potential-output",
+      "referral-friends-slider",
+      "referral-mode-toggle",
+      "referral-earnings-output",
+      "curriculum-module-item-0",
+      "reviews-carousel-track",
+      "review-card-item-1",
+      "admin-edit-reviews-btn",
+      "pricing-buy-button",
+      "seats-urgency-counter",
+      "faq-accordion-item-0",
+      "sticky-bottom-bar",
+      "sticky-webinar-cta",
+      "sticky-buy-cta",
+      "webinar-name-input",
+      "webinar-phone-input",
+      "webinar-submit-btn"
     ]
   },
-  "layout_structure": {
-    "scaffold": {
-      "type": "Hybrid Header-Sidebar",
-      "mobile": "Hamburger menu with slide-out sheet.",
-      "desktop": "Top-heavy 'Banner' style with overlapping cards."
-    },
-    "header_banner": {
-      "height": "h-[280px]",
-      "background": "bg-slate-900 relative overflow-hidden",
-      "content_alignment": "flex flex-col justify-center items-center text-center pt-10 pb-20",
-      "decorations": "Use abstract geometric overlays (opacity-20) in the background."
-    },
-    "main_content": {
-      "container": "container mx-auto px-4 sm:px-6 lg:px-8",
-      "offset": "-mt-20 relative z-10",
-      "grid_strategy": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-    },
-    "spacing": {
-      "section_gap": "gap-8",
-      "card_padding": "p-6 md:p-8"
-    }
+  "image_assets": {
+    "instructor_avatar": "https://images.unsplash.com/photo-1601655781320-205e34c94eb1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzd8MHwxfHNlYXJjaHwyfHxpbmRpYW4lMjBtZW50b3IlMjB0dXRvciUyMHBvcnRyYWl0fGVufDB8fHx8MTc4OTk5NDIwM3ww&ixlib=rb-4.1.0&q=85",
+    "instructor_avatar_caption": "Lead Data Analytics Instructor (4+ Years Corporate Experience)",
+    "analytics_vector_representation": "Hero uses pure inline SVG vector illustration of data cubes, SQL pipelines, and PowerBI gauges with orange glow for 0KB external download overhead."
   },
-  "components": {
-    "cards": {
-      "base": "bg-white rounded-xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300",
-      "stat_card": "flex flex-col justify-between h-full p-6",
-      "referral_card": "flex items-center justify-between p-4 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors"
-    },
-    "buttons": {
-      "primary": "bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-full shadow-lg shadow-indigo-500/20 transition-all active:scale-95",
-      "secondary": "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium py-2 px-6 rounded-full transition-all",
-      "accent": "bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-6 rounded-full shadow-lg shadow-amber-500/20"
-    },
-    "inputs": {
-      "style": "bg-slate-50 border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-lg h-12 px-4 text-base transition-all"
-    },
-    "tabs": {
-      "list": "bg-slate-100/50 p-1 rounded-full inline-flex",
-      "trigger": "rounded-full px-6 py-2 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm transition-all"
-    }
-  },
-  "images": {
-    "assets": {
-      "header_bg": "https://images.unsplash.com/photo-1771011726574-60ab6028724a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MTJ8MHwxfHNlYXJjaHwzfHxkYXJrJTIwYmx1ZSUyMGFic3RyYWN0JTIwZ2VvbWV0cmljJTIwdGVjaG5vbG9neSUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzcxNDMxODgxfDA&ixlib=rb-4.1.0&q=85",
-      "course_placeholder": "https://images.unsplash.com/photo-1562813733-b31f71025d54?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHwzfHxjb2RpbmclMjBvbiUyMGxhcHRvcCUyMHNjcmVlbiUyMGRhcmt8ZW58MHx8fHwxNzcxNDMxODY4fDA&ixlib=rb-4.1.0&q=85",
-      "community_referral": "https://images.unsplash.com/photo-1758518732055-582461d8e345?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBvZmZpY2UlMjB0ZWFtJTIwY29sbGFib3JhdGlvbiUyMGhhcHB5fGVufDB8fHx8MTc3MTQzMTg2OXww&ixlib=rb-4.1.0&q=85",
-      "upsell_bundle": "https://images.unsplash.com/photo-1758637612717-e0cd7dc3cdea?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MTJ8MHwxfHNlYXJjaHwyfHxkYXJrJTIwYmx1ZSUyMGFic3RyYWN0JTIwZ2VvbWV0cmljJTIwdGVjaG5vbG9neSUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzcxNDMxODgxfDA&ixlib=rb-4.1.0&q=85"
-    },
-    "usage": {
-      "header": "Use 'header_bg' with an absolute positioned div, z-0, opacity-30, mix-blend-overlay.",
-      "avatars": "Use UI Avatars (api.dicebear.com) or initials for user profiles if no image is uploaded."
-    }
-  },
-  "motion": {
-    "presets": {
-      "card_entrance": "initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}",
-      "number_count": "Use 'react-countup' or similar for earnings numbers.",
-      "hover_lift": "whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 300 }}"
-    }
-  },
-  "accessibility": {
-    "checklist": [
-      "Ensure text contrast on the dark header is > 4.5:1 (use pure white or very light grey).",
-      "All buttons must have distinct focus rings.",
-      "Use 'aria-label' on all icon-only buttons (copy link, share)."
-    ]
-  },
-  "universal_guidelines": [
-    "Do not use gradients for main text unless it is a very large headline.",
-    "Avoid centering text in cards; left-align creates better scanability for lists.",
-    "Use 'sonner' for all toast notifications (copy success, payout requested).",
-    "All currency inputs must prevent negative numbers.",
-    "Mobile Responsiveness: The header banner should shrink to h-[200px] on mobile, and cards should stack vertically."
-  ],
-  "instructions_to_main_agent": "Start by setting up the Router and the Main Layout (Header + Outlet). Then build the 'Dashboard' page first as it contains the core 'SuperProfile' aesthetic (Dark Banner + Offset Cards). Use the provided image URLs for the 'Course Marketplace' thumbnails."
+  "instructions_to_main_agent": [
+    "DO NOT implement OTP or SMS verification. In-app Instagram browser traffic gets direct native webinar signup or clear open-in-browser prompt for Google OAuth.",
+    "Build as a standalone public route `/courses/data-analytics` in `src/pages/DataAnalyticsLandingPage.js` and link it in the React Router setup.",
+    "Preserve fast loading (<1.5s): Zero video tags, zero heavy external packages. Use standard CSS scroll snap for the 20 review cards.",
+    "Include local storage referral code tracking (`?ref=XXXX`) and ensure all interactive elements have specified `data-testid` attributes.",
+    "Include the interactive Salary ROI Calculator and the 5-Level Referral ROI Calculator with simple vs chain effect toggles."
+  ]
 }

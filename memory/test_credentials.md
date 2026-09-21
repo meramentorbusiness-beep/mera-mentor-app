@@ -1,5 +1,19 @@
 # Mera Mentor - Test Credentials
 
+## Current preview configuration — 2026-09-21
+- The fork arrived with no backend `.env` and no DATABASE_URL. Preview now uses an **isolated local PostgreSQL database**, not the production Supabase database. Production data has not been copied or modified.
+- Backend secrets are in `/app/backend/.env`. Do not copy their values into frontend code or reports.
+- User-provided Google client credentials are configured; callback is `${REACT_APP_BACKEND_URL}/api/auth/google/callback`. User confirmed allowlisting on 2026-09-21; Playwright verified the real Google sign-in form, without redirect mismatch. A full consent/callback still needs a real Google user.
+- Existing recorded Razorpay test credentials are restored in backend `.env`; no new payment provider was added. Webhook secret is still missing, so unsigned/unconfigured webhooks are rejected.
+- Webinar: `https://superprofile.bio/e/CFnAGrLC` (external signup; click/ref parameter tracking only, no external registration callback).
+- No OTP authentication, per explicit user request.
+- API-only preview users: `admin@meramentor.in` (admin, referral `MMTESTADMIN`) and `test@meramentor.in` (user, referral `MMTESTUSER`). No app passwords: Google OAuth is used for real login.
+- Current 48-hour test session tokens are in `/app/.local/test.env`: `ADMIN_SESSION`, `USER_SESSION`. These sessions are test fixtures, not a public login bypass. Set browser `session_token` cookie on the current preview domain for admin UI testing.
+- Local PostgreSQL data is under `/app/.local/postgresql` (ignored by git), using database settings from backend `.env`.
+- `PREVIEW_POSTGRES_DATA` in backend `.env` opts into the guarded persistent local bootstrap. After inactivity, server startup restores this exact existing data, not an empty system cluster. Do not remove the data directory or initialize a replacement database. Supabase configurations must NOT set this preview-only flag.
+- Landing course `course_data_analytics` is deliberately a **draft** until actual lessons are uploaded/published or an existing published ₹1,299 course is linked. Checkout must not sell empty placeholder content.
+- Older entries below describe prior environments; current preview notes above take precedence.
+
 ## Test Users (login via Google OAuth on the UI)
 - Admin: admin@meramentor.in  (email listed in ADMIN_EMAILS env var → auto-admin on first sign-in)
 - User:  test@meramentor.in

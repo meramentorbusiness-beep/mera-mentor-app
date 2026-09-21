@@ -178,6 +178,8 @@ class Purchase(Base):
     razorpay_order_id = Column(String(100), unique=True, index=True)
     razorpay_payment_id = Column(String(100), unique=True, index=True)
     razorpay_signature = Column(String(255))
+    landing_visitor_id = Column(String(80))
+    landing_browser_type = Column(String(20))
     
     status = Column(String(20), default=PurchaseStatus.PENDING.value)
     
@@ -319,12 +321,17 @@ class Review(Base):
     __tablename__ = "reviews"
     
     id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
-    user_id = Column(UUID(as_uuid=False), ForeignKey("users.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=False), ForeignKey("users.id"), nullable=True)
     course_id = Column(UUID(as_uuid=False), ForeignKey("courses.id"), nullable=False)
     
     rating = Column(Integer, nullable=False)
     text = Column(Text)
     verified = Column(Boolean, default=False)
+    name = Column(String(100))
+    role = Column(String(160))
+    display_order = Column(Integer, default=0)
+    is_landing = Column(Boolean, default=False)
+    is_sample = Column(Boolean, default=False)
     
     created_at = Column(DateTime(timezone=True), default=utc_now)
     
@@ -435,3 +442,22 @@ class Category(Base):
     created_at = Column(DateTime(timezone=True), default=utc_now)
     
     children = relationship("Category", backref="parent", remote_side=[id], cascade="all, delete-orphan", single_parent=True)
+
+
+class LandingPage(Base):
+    __tablename__ = "landing_pages"
+    slug = Column(String(80), primary_key=True)
+    settings = Column(JSON, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class LandingEvent(Base):
+    __tablename__ = "landing_events"
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    event_id = Column(String(100), unique=True, nullable=False)
+    visitor_id = Column(String(80), nullable=False, index=True)
+    event = Column(String(40), nullable=False, index=True)
+    browser_type = Column(String(20), nullable=False)
+    referral_code = Column(String(100))
+    details = Column(JSON, default=dict)
+    created_at = Column(DateTime(timezone=True), default=utc_now, index=True)

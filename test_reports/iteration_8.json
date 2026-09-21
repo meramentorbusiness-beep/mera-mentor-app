@@ -1,0 +1,64 @@
+{
+  "summary": "Executed full backend+frontend validation for Data Analytics landing and admin landing management on external preview URL. Added pytest regression suite (15 passing tests), validated key UI flows across required viewports, and captured measurable performance/build outputs.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Landing page runtime",
+        "issue": "A runtime 1x1 iframe is present on public landing page (requirement requested zero iframe/video on landing).",
+        "selector": "iframe (width=1,height=1)",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Regular browser Google signup",
+        "issue": "CTA correctly routes into /api/auth/google/login, but Google returns redirect_uri_mismatch (OAuth client redirect URI configuration mismatch in Google Console).",
+        "affected_selectors": [
+          "[data-testid='signup-google']"
+        ]
+      },
+      {
+        "flow": "Landing referral URL handling",
+        "issue": "Referral persisted to localStorage successfully, but URL parameter cleanup is not happening after reload (ref query stays in URL).",
+        "affected_selectors": [
+          "window.location.search",
+          "localStorage.referral_code"
+        ]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_landing_iteration8_regression.py",
+    "/app/test_reports/pytest/pytest_iteration8.xml"
+  ],
+  "action_items": [
+    "Remove/disable landing iframe injection source so public landing meets zero-iframe requirement.",
+    "Fix Google OAuth redirect URI in Google Cloud for preview callback: https://pdf-upload-fix-9.preview.emergentagent.com/api/auth/google/callback.",
+    "Implement referral query cleanup after capturing ref in localStorage (without losing attribution).",
+    "If strict target requires absolutely no third-party challenge interruptions, mitigate occasional anti-bot/challenge interruptions from outbound navigation tooling during automated QA."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/src/pages/AdminCourses.js is 1200+ lines; split by tab/feature modules for maintainability and safer regressions.",
+    "/app/backend/server.py remains very large (2000+ lines), still mixing unrelated concerns; route/service separation should continue.",
+    "Landing requirement says no iframe/video; runtime currently still includes a hidden iframe in DOM at page load."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_landing_iteration8_regression.py",
+    "/app/test_reports/iteration_8.json",
+    "/app/test_result.md"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 pytest passed)",
+    "frontend": "~90% (core user/admin flows passed; OAuth completion blocked by redirect_uri_mismatch, one iframe requirement miss)"
+  },
+  "seed_data_creation": "Created temporary admin/API and UI test data (reviews, temp published course) and cleaned it up in test teardown/workflow.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use /app/backend/tests/test_landing_iteration8_regression.py as regression baseline. OAuth full consent still blocked due redirect_uri_mismatch. Draft course protection, webhook fail-fast (503 when secret absent), analytics dedupe, admin landing CRUD/settings, and cross-user payment verify guard are passing. Frontend mobile widths 320/375/390/428 and desktop 768/1024/1440 had no horizontal overflow in this run.",
+  "rca of the issue": "Google signup blocker RCA: UI and backend route wiring are correct; request reaches Google auth endpoint, but Google rejects with error 400 redirect_uri_mismatch. Root cause is OAuth client configuration mismatch in Google Cloud Console for this preview callback URL. Iframe RCA: runtime page contains a hidden 1x1 iframe despite landing requirement for zero iframe/video, likely injected by third-party script/analytics layer rather than landing component JSX."
+}

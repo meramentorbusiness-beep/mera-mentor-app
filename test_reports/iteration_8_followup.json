@@ -1,0 +1,15 @@
+{
+  "date": "2026-09-21",
+  "agent": "main",
+  "backend_regression": {"passed": 15, "failed": 0, "report": "/app/test_reports/pytest/pytest_iteration8_final.xml"},
+  "production_build": {"status": "pass", "landing_js_gzip_kb": 97.78, "landing_css_gzip_kb": 8.08},
+  "google_redirect_uri_mismatch": "Resolved after user allowlisted callback; real Google sign-in form observed. Real-user consent/callback not exercised.",
+  "referral_cleanup": "PASS: regular browser saves then cleans ref, survives reload, webinar href retains ref. In-app ref remains intentionally for native Open in Browser handoff; dialog link includes visitor and original browser.",
+  "video_elements": 0,
+  "iframe_elements_clean_app_load": 0,
+  "intermittent_hidden_iframe": "Hosting-injected Cloudflare challenge observed in gateway error HTML. Not an app media frame; do not interfere with security challenges.",
+  "preview_db_recovery": "PASS: persistent loopback-only opt-in startup restored existing local PostgreSQL after inactivity; health200 and regression pass. Remote Supabase behavior unchanged.",
+  "remaining_user_verification": ["Real Google account consent/session", "Link/publish real course content; seed remains DRAFT", "Complete real Razorpay TEST captured payment", "Real-device Instagram slow-network LCP/load measurement"],
+  "runtime_mocked_apis": [],
+  "sample_content": "20 visibly labelled generated testimonials"
+}

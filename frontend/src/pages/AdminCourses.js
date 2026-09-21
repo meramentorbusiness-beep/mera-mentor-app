@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { LandingManager } from "@/components/admin/LandingManager";
 
 // File Upload Component with drag-drop and progress
 function MediaUploader({ type = "video", onUpload, courseId, lessonId, accept }) {
@@ -735,7 +736,7 @@ export default function AdminCourses() {
 
   const fetchCourses = async () => {
     try {
-      const res = await axios.get(`${API}/courses`);
+      const res = await axios.get(`${API}/admin/courses`, { withCredentials: true });
       setCourses(res.data);
     } catch (e) { console.error(e); }
   };
@@ -918,7 +919,7 @@ export default function AdminCourses() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-slate-100/60 p-1 rounded-full inline-flex mb-5">
+        <TabsList className="bg-slate-100/60 p-1 rounded-full inline-flex flex-wrap h-auto mb-5">
           <TabsTrigger value="courses" className="rounded-full px-4 py-1.5 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-xs font-medium">
             Courses ({courses.length})
           </TabsTrigger>
@@ -931,6 +932,7 @@ export default function AdminCourses() {
           <TabsTrigger value="settings" className="rounded-full px-4 py-1.5 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-xs font-medium">
             Settings
           </TabsTrigger>
+          <TabsTrigger value="landing" data-testid="admin-landing-tab" className="rounded-full px-4 py-1.5 data-[state=active]:bg-white data-[state=active]:text-orange-700 text-xs font-medium">Landing page</TabsTrigger>
         </TabsList>
 
         <TabsContent value="courses">
@@ -944,7 +946,7 @@ export default function AdminCourses() {
           <div className="space-y-3">
             {courses.map((course, idx) => (
               <Card key={course.course_id} className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 flex items-center gap-4" data-testid={`admin-course-row-${idx}`}>
-                <img src={course.image} alt={course.title} className="w-16 h-12 rounded-lg object-cover shrink-0" />
+                {course.image ? <img src={course.image} alt={course.title} className="w-16 h-12 rounded-lg object-cover shrink-0" /> : <div className="w-16 h-12 rounded-lg bg-orange-100 grid place-items-center shrink-0"><BarChart3 className="text-orange-600 w-6 h-6" /></div>}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-heading font-semibold text-slate-900 text-sm truncate">{course.title}</h3>
@@ -977,6 +979,7 @@ export default function AdminCourses() {
           <MediaLibrary />
         </TabsContent>
 
+        <TabsContent value="landing"><LandingManager courses={courses} /></TabsContent>
         <TabsContent value="settings">
           <div className="grid md:grid-cols-2 gap-5 mb-5">
             <CommissionSettings />

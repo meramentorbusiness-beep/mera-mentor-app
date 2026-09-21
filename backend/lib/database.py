@@ -51,7 +51,7 @@ engine = create_async_engine(
     echo=os.environ.get("NODE_ENV") == "development",
     poolclass=NullPool,
     connect_args={
-        "ssl": "require",
+        "ssl": False if os.environ.get("PREVIEW_POSTGRES_DATA") and parts.hostname in {"127.0.0.1", "localhost"} else "require",
         "statement_cache_size": 0,
         "server_settings": {"application_name": "mera_mentor"},
     },
