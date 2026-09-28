@@ -255,3 +255,32 @@ ADMIN_EMAILS=admin@meramentor.in
 - **P1**: replace sample reviews, confirm mentor experience/social-proof metrics, add WhatsApp/Instagram links; configure payment webhook and missing email/storage credentials; test on real Instagram iOS/Android with mobile network throttling.
 - **P1 / previous scope**: comprehensive quiz/category/PDF resource regression remains pending from the previous session; this landing iteration did not claim to complete it.
 - **P2**: split large existing server.py/AdminCourses.js further; provider-confirmed webinar signup attribution; measure/A-B test webinar CTA conversion using existing analytics.
+
+## Category Workflow Simplification — 2026-09-28 (current behavior)
+
+### User requirement
+Remove the separate folder/category management section. Inside the existing Create/Edit Course form, provide exactly one Category field: choose an existing database category from dropdown suggestions or type a new name; create it automatically only on successful course save. No new category page, route, admin section or separate creation flow. Preserve existing categories and course attachments. User reiterated this should make organizing courses with videos/resources into categories easy.
+
+### Changes made
+- `frontend/src/pages/AdminCourses.js`: removed the Settings **Course Categories** card, `CategoryManager`, `CategoryRow`, parent/root tree controls, category add/rename/delete handlers, associated local state and category-management icons/imports. Removed hardcoded fallback category choices.
+- Replaced the select-only course category control with one labelled shadcn Input backed by native HTML datalist suggestions (no dependency added). It accepts an existing category or any new name, limits names to 100 characters, and refreshes database choices on opening the editor and after saving.
+- `backend/server.py`: removed POST `/api/admin/categories`, PUT/DELETE `/api/admin/categories/{category_id}` and obsolete default-category startup seeding. Only read-only GET `/api/categories` remains, intentionally used by the course field. No new HTTP route or page was added.
+- Course POST/PUT now resolve categories in the same database transaction as course save. Course creation uses flush rather than an early commit, so a failed save does not leave an orphan category/course. No category is created while typing or cancelling.
+- `backend/services/course_categories.py`: small shared helper normalizes spaces, validates names, matches existing spelling case-insensitively, includes legacy Course.category values in suggestions, and uses a PostgreSQL transaction lock to prevent duplicate concurrent creation.
+- `backend/models/models.py`: retained the actively used Category model/table and existing `parent_id` data; removed the obsolete hierarchy ORM relationship. No existing category or parent assignment was deleted/migrated. All newly created inline categories are flat.
+- Category groups the course; its videos and PDF/resource URLs remain attached to that course. This does not create a new physical object-storage-folder workflow or move uploaded files.
+
+### Verification / cleanup
+- `/app/test_reports/iteration_9.json`: no backend/frontend bugs; 11/11 backend tests in `/app/backend/tests/test_inline_category_course_flow_iteration9.py` passed.
+- Covered create/select/edit, category persistence/suggestions refresh, cancellation, whitespace/case dedupe, simultaneous saves, invalid input/no orphan behavior, category-only updates preserving video/PDF URLs, 401/403 admin protection, and removed write routes returning404.
+- Desktop and 375px mobile checks passed; exactly one Category input, no standalone manager, no dialog horizontal overflow. Production build passes; only pre-existing hook-dependency warnings remain as optional tech debt.
+- Source search confirmed no runtime references to CategoryManager/CategoryRow, category-management write URLs or old add/parent/rename/delete controls. Read-only suggestions + active Category model are deliberately retained, not dangling code.
+- Main agent cleaned only the exact iteration9 test fixture course/category IDs after tests; existing categories/data preserved.
+- Test sessions were renewed for48hours on2026-09-28; details remain in memory/test_credentials.md, no auth logic changed.
+- Preview DB startup was blocked by supervisor's minimal PATH. Existing system PostgreSQL runtime/data were intact. Configured absolute PREVIEW_POSTGRES_BIN/PREVIEW_RUNUSER paths and updated the opt-in helper; health200, actual course persistence and tests verified. Remote Supabase behavior unchanged.
+
+### Remaining / next actions
+- **P0 for this request**: none; user can verify Admin → Courses → New Course → Category → Save Course.
+- **Unchanged blocker**: actual R2 uploads cannot be verified/used in this preview without storage credentials. Attachment URL preservation was tested with explicit fixtures, not simulated upload success. No runtime category API is mocked.
+- **Earlier backlog**: actual landing-course content, real Google user consent/full payment verification, provider credentials and full quiz regression remain as listed above; old standalone category-management tasks are superseded by this inline flow.
+- **Optional future usability improvement**: a category filter on the existing course list only if requested; no additional management page.

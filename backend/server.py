@@ -22,9 +22,10 @@ from lib.database import get_db, init_db, close_db, async_session_maker
 from models.models import (
     User, UserSession, Course, Lesson, Resource, Purchase, Commission,
     Payout, CourseProgress, Certificate, Quiz, QuizAttempt, Review,
-    Coupon, Notification, MediaAccessLog, EmailLog, Media, Category, LandingPage,
+    Coupon, Notification, MediaAccessLog, EmailLog, Media, LandingPage,
     PurchaseStatus, CommissionStatus, PayoutStatus
 )
+from services.course_categories import category_options, resolve_course_category
 
 app = FastAPI(title="Mera Mentor API", version="2.0.0")
 
@@ -1519,6 +1520,9 @@ async def get_admin_stats(admin: dict = Depends(require_admin), db: AsyncSession
 async def create_course(request: Request, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     """Create a new course"""
     body = await request.json()
+    if not isinstance(body.get("title"), str) or not body["title"].strip():
+        raise HTTPException(400, "Title is required")
+    category = await resolve_course_category(db, body.get("category", "General"))
     
     course = Course(
         course_id=f"course_{uuid.uuid4().hex[:8]}",
@@ -1527,7 +1531,7 @@ async def create_course(request: Request, admin: dict = Depends(require_admin), 
         price=body.get("price", 499),
         original_price=body.get("original_price"),
         image=body.get("image", ""),
-        category=body.get("category", "General"),
+        category=category,
         tier=body.get("tier", "standard"),
         is_upsell=body.get("is_upsell", False),
         upsell_for=body.get("upsell_for"),
@@ -1535,8 +1539,8 @@ async def create_course(request: Request, admin: dict = Depends(require_admin), 
         created_by=admin["user_id"],
     )
     db.add(course)
-    await db.commit()
-    await db.refresh(course)
+    # Category, course, lessons and resources succeed or roll back together.
+    await db.flush()
     
     # Add lessons
     for i, lesson_data in enumerate(body.get("lessons", [])):
@@ -1567,12 +1571,14 @@ async def create_course(request: Request, admin: dict = Depends(require_admin), 
     
     await db.commit()
     
-    return {"message": "Course created", "course_id": course.course_id}
+    return {"message": "Course created", "course_id": course.course_id, "category": course.category}
 
 @api_router.put("/admin/courses/{course_id}")
 async def update_course(course_id: str, request: Request, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     """Update a course"""
     body = await request.json()
+    if "title" in body and (not isinstance(body["title"], str) or not body["title"].strip()):
+        raise HTTPException(400, "Title is required")
     
     stmt = select(Course).where(Course.course_id == course_id)
     result = await db.execute(stmt)
@@ -1582,6 +1588,8 @@ async def update_course(course_id: str, request: Request, admin: dict = Depends(
         raise HTTPException(status_code=404, detail="Course not found")
     
     # Update fields
+    if "category" in body:
+        body["category"] = await resolve_course_category(db, body["category"])
     for field in ["title", "description", "price", "original_price", "image", "category", "tier", "is_upsell", "upsell_for", "published"]:
         if field in body:
             setattr(course, field, body[field])
@@ -1627,7 +1635,7 @@ async def update_course(course_id: str, request: Request, admin: dict = Depends(
     
     await db.commit()
     
-    return {"message": "Course updated"}
+    return {"message": "Course updated", "category": course.category}
 
 @api_router.delete("/admin/courses/{course_id}")
 async def delete_course(course_id: str, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
@@ -1880,98 +1888,12 @@ async def submit_quiz(quiz_id: str, request: Request, user: dict = Depends(get_c
         "results": results_detail,
     }
 
-# ========== Category Routes ==========
+# ========== Category Suggestions ==========
 
 @api_router.get("/categories")
 async def list_categories(db: AsyncSession = Depends(get_db)):
-    """List all categories (public)"""
-    stmt = select(Category).order_by(Category.name)
-    result = await db.execute(stmt)
-    categories = result.scalars().all()
-    
-    # Build a lookup from DB id to category_id for parent resolution
-    id_to_cat_id = {str(c.id): c.category_id for c in categories}
-    
-    return [
-        {
-            "category_id": c.category_id,
-            "name": c.name,
-            "parent_id": id_to_cat_id.get(str(c.parent_id)) if c.parent_id else None,
-            "created_at": c.created_at.isoformat() if c.created_at else None,
-        }
-        for c in categories
-    ]
-
-@api_router.post("/admin/categories")
-async def create_category(request: Request, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
-    """Create a new category"""
-    body = await request.json()
-    name = body.get("name", "").strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="Category name is required")
-    
-    # Check duplicate
-    stmt = select(Category).where(func.lower(Category.name) == name.lower())
-    result = await db.execute(stmt)
-    if result.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Category already exists")
-    
-    # Handle parent
-    parent_db_id = None
-    parent_cat_id = body.get("parent_id")
-    if parent_cat_id:
-        stmt2 = select(Category).where(Category.category_id == parent_cat_id)
-        result2 = await db.execute(stmt2)
-        parent = result2.scalar_one_or_none()
-        if not parent:
-            raise HTTPException(status_code=404, detail="Parent category not found")
-        parent_db_id = parent.id
-    
-    cat = Category(
-        category_id=f"cat_{uuid.uuid4().hex[:8]}",
-        name=name,
-        parent_id=parent_db_id,
-    )
-    db.add(cat)
-    await db.commit()
-    
-    return {"message": "Category created", "category_id": cat.category_id, "name": cat.name}
-
-@api_router.put("/admin/categories/{category_id}")
-async def update_category(category_id: str, request: Request, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
-    """Rename a category"""
-    body = await request.json()
-    
-    stmt = select(Category).where(Category.category_id == category_id)
-    result = await db.execute(stmt)
-    cat = result.scalar_one_or_none()
-    if not cat:
-        raise HTTPException(status_code=404, detail="Category not found")
-    
-    name = body.get("name", "").strip()
-    if name:
-        # Check duplicate
-        stmt2 = select(Category).where(func.lower(Category.name) == name.lower(), Category.id != cat.id)
-        result2 = await db.execute(stmt2)
-        if result2.scalar_one_or_none():
-            raise HTTPException(status_code=400, detail="Category name already exists")
-        cat.name = name
-    
-    await db.commit()
-    return {"message": "Category updated"}
-
-@api_router.delete("/admin/categories/{category_id}")
-async def delete_category(category_id: str, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
-    """Delete a category"""
-    stmt = select(Category).where(Category.category_id == category_id)
-    result = await db.execute(stmt)
-    cat = result.scalar_one_or_none()
-    if not cat:
-        raise HTTPException(status_code=404, detail="Category not found")
-    
-    await db.delete(cat)
-    await db.commit()
-    return {"message": "Category deleted"}
+    """Read-only suggestions for the inline course category field."""
+    return await category_options(db)
 
 # ========== Media Upload Routes ==========
 
@@ -2181,23 +2103,6 @@ async def startup():
             print("✅ Migration check complete")
     except Exception as e:
         print(f"⚠️  Migration warning: {e}")
-    
-    # Seed default categories if table is empty
-    try:
-        async with async_session_maker() as session:
-            result = await session.execute(select(func.count(Category.id)))
-            count = result.scalar() or 0
-            if count == 0:
-                defaults = ["Development", "Data Science", "Marketing", "Design", "Business", "Bundle", "General"]
-                for name in defaults:
-                    session.add(Category(
-                        category_id=f"cat_{uuid.uuid4().hex[:8]}",
-                        name=name,
-                    ))
-                await session.commit()
-                print(f"✅ Seeded {len(defaults)} default categories")
-    except Exception as e:
-        print(f"⚠️  Category seed warning: {e}")
     
     try:
         init_storage()

@@ -437,11 +437,11 @@ class Category(Base):
     id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     category_id = Column(String(50), unique=True, nullable=False, index=True)
     name = Column(String(100), nullable=False)
+    # Retained to preserve historical data; new inline categories are flat.
     parent_id = Column(UUID(as_uuid=False), ForeignKey("categories.id"), nullable=True)
     
     created_at = Column(DateTime(timezone=True), default=utc_now)
     
-    children = relationship("Category", backref="parent", remote_side=[id], cascade="all, delete-orphan", single_parent=True)
 
 
 class LandingPage(Base):

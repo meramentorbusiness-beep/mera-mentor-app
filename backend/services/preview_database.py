@@ -5,7 +5,6 @@ The database itself and its configuration live in the persistent workspace.
 """
 import asyncio
 import os
-import shutil
 import socket
 import subprocess
 from pathlib import Path
@@ -27,10 +26,11 @@ def _start_preview_database():
             return
     except OSError:
         pass
-    pg_config = shutil.which("pg_config")
-    if not pg_config:
-        raise RuntimeError("The local preview requires the PostgreSQL system package")
-    bindir = subprocess.check_output([pg_config, "--bindir"], text=True).strip()
+    # Supervisor can have a minimal PATH after inactivity; use configured executables.
+    bindir = Path(os.environ["PREVIEW_POSTGRES_BIN"])
+    runuser = os.environ["PREVIEW_RUNUSER"]
+    if not (bindir / "pg_ctl").is_file():
+        raise RuntimeError("The configured preview PostgreSQL runtime is unavailable")
     # Paths are resolved server configuration, never derived from a web request.
     def quoted(value):
         return str(value).replace("'", "''")
@@ -47,7 +47,7 @@ def _start_preview_database():
     hba.write_text("local all all peer\nhost all all 127.0.0.1/32 scram-sha-256\nhost all all ::1/128 scram-sha-256\n")
     config.chmod(0o644)
     hba.chmod(0o644)
-    subprocess.run(["runuser", "-u", "postgres", "--", str(Path(bindir) / "pg_ctl"),
+    subprocess.run([runuser, "-u", "postgres", "--", str(bindir / "pg_ctl"),
                     "-D", str(data), "-l", str(data / "preview.log"),
                     "-o", f"-c config_file={config}", "-w", "-t", "30", "start"],
                    check=True, timeout=40, cwd="/app")

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth, API } from "@/App";
 import axios from "axios";
 import { toast } from "sonner";
-import { Plus, Trash2, GripVertical, Save, Eye, EyeOff, Video, FileText, Users, IndianRupee, ShoppingBag, Upload, X, Check, Loader2, Youtube, File, Image, Settings, BarChart3, ClipboardList, FolderTree, Clock, Edit2, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Save, Eye, EyeOff, Video, FileText, Users, IndianRupee, ShoppingBag, Upload, X, Check, Loader2, Youtube, File, Image, Settings, BarChart3, ClipboardList, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -579,137 +579,6 @@ function QuizManager({ courses }) {
   );
 }
 
-// Category Manager Component
-function CategoryManager() {
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [newName, setNewName] = useState("");
-  const [newParentId, setNewParentId] = useState("");
-  const [editingId, setEditingId] = useState(null);
-  const [editingName, setEditingName] = useState("");
-
-  useEffect(() => { fetchCategories(); }, []);
-
-  const fetchCategories = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get(`${API}/categories`);
-      setCategories(res.data);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
-
-  const addCategory = async () => {
-    if (!newName.trim()) { toast.error("Name is required"); return; }
-    try {
-      await axios.post(`${API}/admin/categories`, {
-        name: newName.trim(),
-        parent_id: newParentId || null,
-      }, { withCredentials: true });
-      toast.success("Category created");
-      setNewName("");
-      setNewParentId("");
-      fetchCategories();
-    } catch (e) { toast.error(e.response?.data?.detail || "Create failed"); }
-  };
-
-  const renameCategory = async (catId) => {
-    if (!editingName.trim()) return;
-    try {
-      await axios.put(`${API}/admin/categories/${catId}`, { name: editingName.trim() }, { withCredentials: true });
-      toast.success("Category renamed");
-      setEditingId(null);
-      fetchCategories();
-    } catch (e) { toast.error(e.response?.data?.detail || "Rename failed"); }
-  };
-
-  const deleteCategory = async (catId) => {
-    if (!window.confirm("Delete this category?")) return;
-    try {
-      await axios.delete(`${API}/admin/categories/${catId}`, { withCredentials: true });
-      toast.success("Category deleted");
-      fetchCategories();
-    } catch (e) { toast.error(e.response?.data?.detail || "Delete failed"); }
-  };
-
-  const rootCategories = categories.filter(c => !c.parent_id);
-  const getChildren = (parentId) => categories.filter(c => c.parent_id === parentId);
-
-  return (
-    <Card className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-      <h3 className="font-heading font-semibold text-slate-900 mb-4 flex items-center gap-2">
-        <FolderTree className="w-4 h-4 text-indigo-500" /> Course Categories
-      </h3>
-
-      {/* Add Category */}
-      <div className="flex gap-2 mb-4">
-        <Input placeholder="New category name" value={newName} onChange={e => setNewName(e.target.value)} className="text-xs h-9 flex-1" data-testid="new-category-input"
-          onKeyDown={e => e.key === "Enter" && addCategory()} />
-        <Select value={newParentId || "none"} onValueChange={v => setNewParentId(v === "none" ? "" : v)}>
-          <SelectTrigger className="w-36 h-9 text-xs"><SelectValue placeholder="No parent" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No parent</SelectItem>
-            {rootCategories.map(c => (
-              <SelectItem key={c.category_id} value={c.category_id}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button onClick={addCategory} className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-4 text-xs rounded-lg" data-testid="add-category-btn">
-          <Plus className="w-3.5 h-3.5 mr-1" /> Add
-        </Button>
-      </div>
-
-      {/* Category List */}
-      {loading ? (
-        <div className="text-center py-6"><Loader2 className="w-5 h-5 animate-spin mx-auto text-slate-400" /></div>
-      ) : categories.length === 0 ? (
-        <p className="text-xs text-slate-400 text-center py-4">No categories yet</p>
-      ) : (
-        <div className="space-y-1">
-          {rootCategories.map(cat => (
-            <div key={cat.category_id}>
-              <CategoryRow cat={cat} editingId={editingId} editingName={editingName} setEditingId={setEditingId} setEditingName={setEditingName} renameCategory={renameCategory} deleteCategory={deleteCategory} depth={0} />
-              {getChildren(cat.category_id).map(child => (
-                <CategoryRow key={child.category_id} cat={child} editingId={editingId} editingName={editingName} setEditingId={setEditingId} setEditingName={setEditingName} renameCategory={renameCategory} deleteCategory={deleteCategory} depth={1} />
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-function CategoryRow({ cat, editingId, editingName, setEditingId, setEditingName, renameCategory, deleteCategory, depth }) {
-  const isEditing = editingId === cat.category_id;
-  return (
-    <div className={`flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 group ${depth > 0 ? "ml-6" : ""}`} data-testid={`category-row-${cat.category_id}`}>
-      {depth > 0 && <ChevronRight className="w-3 h-3 text-slate-300" />}
-      <FolderTree className={`w-3.5 h-3.5 ${depth > 0 ? "text-slate-400" : "text-indigo-500"} shrink-0`} />
-      {isEditing ? (
-        <Input value={editingName} onChange={e => setEditingName(e.target.value)} className="text-xs h-7 flex-1"
-          onKeyDown={e => { if (e.key === "Enter") renameCategory(cat.category_id); if (e.key === "Escape") setEditingId(null); }}
-          autoFocus />
-      ) : (
-        <span className="text-xs text-slate-700 flex-1 font-medium">{cat.name}</span>
-      )}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {isEditing ? (
-          <>
-            <Button variant="ghost" size="sm" onClick={() => renameCategory(cat.category_id)} className="h-6 w-6 p-0 text-emerald-600"><Check className="w-3 h-3" /></Button>
-            <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} className="h-6 w-6 p-0 text-slate-400"><X className="w-3 h-3" /></Button>
-          </>
-        ) : (
-          <>
-            <Button variant="ghost" size="sm" onClick={() => { setEditingId(cat.category_id); setEditingName(cat.name); }} className="h-6 w-6 p-0 text-slate-400"><Edit2 className="w-3 h-3" /></Button>
-            <Button variant="ghost" size="sm" onClick={() => deleteCategory(cat.category_id)} className="h-6 w-6 p-0 text-red-400"><Trash2 className="w-3 h-3" /></Button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function AdminCourses() {
   const { user } = useAuth();
   const [courses, setCourses] = useState([]);
@@ -722,7 +591,7 @@ export default function AdminCourses() {
 
   const emptyCourse = {
     title: "", description: "", price: 500, original_price: 999,
-    image: "", category: "Development", tier: "standard",
+    image: "", category: "", tier: "standard",
     is_upsell: false, upsell_for: "", published: true,
     lessons: [], resources: [],
   };
@@ -745,7 +614,7 @@ export default function AdminCourses() {
     try {
       const res = await axios.get(`${API}/categories`);
       setCategories(res.data);
-    } catch (e) { console.error(e); }
+    } catch (e) { toast.error("Couldn't load categories. You can still enter a category name."); }
   };
 
   const fetchStats = async () => {
@@ -755,8 +624,9 @@ export default function AdminCourses() {
     } catch (e) { console.error(e); }
   };
 
-  const openNew = () => { setEditingCourse({ ...emptyCourse }); setEditOpen(true); };
+  const openNew = () => { setEditingCourse({ ...emptyCourse }); fetchCategories(); setEditOpen(true); };
   const openEdit = async (course) => {
+    fetchCategories();
     try {
       const res = await axios.get(`${API}/courses/${course.course_id}`);
       const fullCourse = res.data;
@@ -846,7 +716,8 @@ export default function AdminCourses() {
   };
 
   const saveCourse = async () => {
-    if (!editingCourse.title) { toast.error("Title is required"); return; }
+    if (!editingCourse.title?.trim()) { toast.error("Title is required"); return; }
+    if (!editingCourse.category?.trim()) { toast.error("Choose or enter a category"); return; }
     setSaving(true);
     try {
       if (editingCourse.course_id) {
@@ -858,6 +729,7 @@ export default function AdminCourses() {
       }
       setEditOpen(false);
       fetchCourses();
+      fetchCategories();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Save failed");
     } finally {
@@ -1002,39 +874,33 @@ export default function AdminCourses() {
               </div>
             </Card>
           </div>
-          <CategoryManager />
         </TabsContent>
       </Tabs>
 
       {/* Edit/Create Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent data-testid="course-editor-dialog" className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-heading">{editingCourse?.course_id ? "Edit Course" : "Create Course"}</DialogTitle>
+            <DialogDescription className="sr-only">Course details, category, lessons and resources.</DialogDescription>
           </DialogHeader>
 
           {editingCourse && (
             <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-body">Title</Label>
                   <Input data-testid="course-title-input" value={editingCourse.title} onChange={(e) => setEditingCourse({ ...editingCourse, title: e.target.value })} className="mt-1" />
                 </div>
                 <div>
-                  <Label className="text-xs font-body">Category</Label>
-                  <Select value={editingCourse.category} onValueChange={(v) => setEditingCourse({ ...editingCourse, category: v })}>
-                    <SelectTrigger className="mt-1" data-testid="course-category-select"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {categories.length > 0
-                        ? categories.map((c) => (
-                            <SelectItem key={c.category_id} value={c.name}>{c.name}</SelectItem>
-                          ))
-                        : ["Development", "Data Science", "Marketing", "Design", "Business", "Bundle", "General"].map((c) => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                          ))
-                      }
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="course-category" className="text-xs font-body">Category</Label>
+                  <Input id="course-category" data-testid="course-category-input" list="course-category-options"
+                    value={editingCourse.category || ""} maxLength={100} autoComplete="off"
+                    onChange={(e) => setEditingCourse({ ...editingCourse, category: e.target.value })}
+                    className="mt-1" placeholder="Select or type a category" />
+                  <datalist id="course-category-options" data-testid="course-category-options">
+                    {categories.map((category, index) => <option key={category.name} value={category.name} data-testid={`course-category-option-${index}`} />)}
+                  </datalist>
                 </div>
               </div>
 
@@ -1218,7 +1084,7 @@ export default function AdminCourses() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)} className="rounded-full text-xs">Cancel</Button>
+            <Button data-testid="cancel-course-btn" variant="outline" onClick={() => setEditOpen(false)} className="rounded-full text-xs">Cancel</Button>
             <Button data-testid="save-course-btn" onClick={saveCourse} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-xs">
               {saving ? "Saving..." : <><Save className="w-3.5 h-3.5 mr-1" /> Save Course</>}
             </Button>
