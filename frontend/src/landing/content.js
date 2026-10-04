@@ -4,16 +4,16 @@ export const stack = [
   { icon: '📊', tag: 'The Foundation', title: 'Advanced Excel & Data Cleaning', detail: '(Jahan 80% kaam hota hai)', color: 'green' },
   { icon: '🗄️', tag: 'The Backbone', title: 'SQL', detail: 'Databases se baat karna aur data extract karna seekho', color: 'blue' },
   { icon: '📈', tag: 'The Story', title: 'Power BI / Tableau', detail: 'Dashboards banao jo stakeholders samajh sakein', color: 'yellow' },
-  { icon: '🤖', tag: 'The AI Advantage', title: 'ChatGPT & AI tools', detail: 'Apna coding aur analysis automate karna (Yeh skill aapko irreplaceable banayega)', color: 'orange' },
+  { icon: '🤖', tag: 'The AI Advantage', title: 'ChatGPT & AI tools', detail: 'Repetitive analysis automate karna aur AI-generated answers verify karna seekho', color: 'orange' },
   { icon: '💼', tag: 'The Job Hunt', title: 'Resume hacks aur interview prep', detail: 'Specially freshers ke liye', color: 'pink' },
 ];
 export const curriculum = [
-  { title: 'Data analytics ki foundation', duration: '2 weeks', topics: ['Analyst ka role aur analytical thinking', 'Data types, business questions aur real-world use cases'], unlocked: true },
-  { title: 'Advanced Excel & data cleaning', duration: '4 weeks', topics: ['XLOOKUP, pivot tables aur spreadsheet analysis', 'Messy datasets clean karna aur reporting workflows'], unlocked: true },
-  { title: 'SQL: data se answers tak', duration: '6 weeks', topics: ['SELECT, filtering, grouping aur joins', 'Subqueries, window functions aur practice datasets'] },
-  { title: 'Power BI / Tableau dashboards', duration: '6 weeks', topics: ['Data modelling aur visual storytelling', 'Business KPIs aur interactive dashboard project'] },
-  { title: 'AI tools for smarter analysis', duration: '3 weeks', topics: ['ChatGPT for SQL, Excel formulas aur debugging', 'AI-generated answers validate karna aur responsible workflows'] },
-  { title: 'Portfolio, resume & interview prep', duration: '3 weeks', topics: ['End-to-end capstone project', 'Resume review, interview questions aur project presentation'] },
+  { title: 'Data analytics ki foundation', topics: ['Analyst ka role aur analytical thinking', 'Data types, business questions aur real-world use cases'], unlocked: true },
+  { title: 'Advanced Excel & data cleaning', topics: ['XLOOKUP, pivot tables aur spreadsheet analysis', 'Messy datasets clean karna aur reporting workflows'], unlocked: true },
+  { title: 'SQL: data se answers tak', topics: ['SELECT, filtering, grouping aur joins', 'Subqueries, window functions aur practice datasets'] },
+  { title: 'Power BI / Tableau dashboards', topics: ['Data modelling aur visual storytelling', 'Business KPIs aur interactive dashboard project'] },
+  { title: 'AI tools for smarter analysis', topics: ['ChatGPT for SQL, Excel formulas aur debugging', 'AI-generated answers validate karna aur responsible workflows'] },
+  { title: 'Portfolio, resume & interview prep', topics: ['End-to-end capstone project', 'Resume review, interview questions aur project presentation'] },
 ];
 export const faq = [
   ['Kya refund milega agar course pasand nahi aaya?', 'Nahi, hum no-refund policy follow karte hain. Isliye demo content dekh kar hi decision lein.'],

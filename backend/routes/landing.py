@@ -52,6 +52,13 @@ class ReviewInput(BaseModel):
     role: str = Field(default="", max_length=160)
     display_order: int = Field(default=0, ge=0, le=10000)
     is_sample: bool = True
+    outcome: str = Field(default="", max_length=80)
+
+    @model_validator(mode="after")
+    def outcome_for_genuine_reviews_only(self):
+        if self.is_sample:
+            self.outcome = ""
+        return self
 
 
 class EventInput(BaseModel):
@@ -68,7 +75,7 @@ class EventInput(BaseModel):
 def serialize_review(r):
     return {"id": str(r.id), "name": r.name, "rating": r.rating,
             "review_text": r.text, "role": r.role or "", "display_order": r.display_order,
-            "is_sample": r.is_sample}
+            "is_sample": r.is_sample, "outcome": (r.outcome or "") if not r.is_sample else ""}
 
 
 async def record_event(db, *, event_id, visitor_id, event, browser_type, referral_code=None, details=None):

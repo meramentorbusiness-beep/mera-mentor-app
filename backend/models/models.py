@@ -329,6 +329,7 @@ class Review(Base):
     verified = Column(Boolean, default=False)
     name = Column(String(100))
     role = Column(String(160))
+    outcome = Column(String(80), default="")
     display_order = Column(Integer, default=0)
     is_landing = Column(Boolean, default=False)
     is_sample = Column(Boolean, default=False)

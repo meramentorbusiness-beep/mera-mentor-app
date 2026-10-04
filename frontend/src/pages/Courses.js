@@ -7,6 +7,7 @@ import { ShoppingCart, Check, Play, BookOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { loadCheckout } from '@/lib/razorpay';
 
 export default function Courses() {
   const { user } = useAuth();
@@ -37,6 +38,7 @@ export default function Courses() {
 
       if (order.key_id) {
         // Real Razorpay checkout
+        await loadCheckout();
         const options = {
           key: order.key_id,
           amount: order.amount_paise,
@@ -62,18 +64,10 @@ export default function Courses() {
         rzp.open();
         return; // setPurchasing handled by modal ondismiss / handler
       } else {
-        // Demo mode — no Razorpay keys configured
-        await axios.post(`${API}/payments/verify`, {
-          razorpay_order_id: order.order_id,
-          razorpay_payment_id: `pay_demo_${Date.now()}`,
-          razorpay_signature: "",
-        }, { withCredentials: true });
-        toast.success(`Successfully purchased ${order.course?.title || course.title}!`);
-        fetchPurchases();
-        navigate(`/upsell/${course.course_id}`);
+        throw new Error('Payments are temporarily unavailable');
       }
     } catch (e) {
-      toast.error(e.response?.data?.detail || "Purchase failed");
+      toast.error(e.response?.data?.detail || e.message || "Purchase failed");
     } finally {
       setPurchasing(null);
     }

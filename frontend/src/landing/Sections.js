@@ -2,45 +2,47 @@ import { useRef } from 'react';
 import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, Check, LockKeyhole, GraduationCap, Infinity, ShieldCheck, Sparkles } from 'lucide-react';
 import { stack, curriculum, faq, inclusions } from './content';
 import { track, webinarLink } from './client';
+import { ReviewCard } from './ReviewCard';
 
 export const WebinarButton = ({ source, url, children, className = '' }) => <a className={`lp-button ${className}`} data-testid={`webinar-${source}`} href={webinarLink(url)} onClick={() => track('webinar_click', source)}><GraduationCap size={21} />{children || 'Free Webinar Join Karo'}<ArrowUpRight size={19} /></a>;
 
-export const Hero = ({ settings, webinarUrl }) => <>
+export const Hero = ({ webinarUrl }) => <>
   <section className="lp-hero" aria-labelledby="hero-heading">
     <img className="lp-hero-art" src="/landing/hero.webp" width="1264" height="848" alt="Data analytics workspace with Excel, database and dashboard illustrations" fetchPriority="high" data-testid="hero-illustration" />
     <div className="lp-wrap lp-hero-inner">
       <div className="lp-hero-label"><span className="lp-live-dot" /><span>YOUR NEXT CHAPTER STARTS HERE</span><span className="lp-label-year">2026</span></div>
-      <h1 id="hero-heading" data-testid="hero-headline">6 Mahine Mein<br /><span>Data Analyst</span><br className="lp-mobile-title-break" /> Ban Jao<span className="lp-orange">.</span></h1>
-      <p className="lp-hero-promise">Bina Coding Background Ke.</p>
+      <h1 id="hero-heading" data-testid="hero-headline"><span className="lp-hero-question">No Coding Background?</span>{' '}Become a <span className="lp-orange">Data Analyst</span><br /> in <span className="lp-orange">2 Months.</span></h1>
+      <p className="lp-hero-promise">Excel se AI tak. Step by step, apni pace pe.</p>
       <p className="lp-hero-description">Fresher ho ya career switcher — Excel se AI tak,<br className="lp-desktop-break" /> practical skills seekho. Apne next chapter ke liye ready ho jao.</p>
       <div className="lp-hero-ctas"><WebinarButton source="hero" url={webinarUrl} /><a className="lp-button lp-button-outline" data-testid="course-hero" href="#pricing" onClick={() => track('course_click', 'hero')}>Course Dekho — ₹1,299<ArrowRight size={19} /></a></div>
-      <div className="lp-hero-proof" data-testid="hero-trust-badges"><span><span className="lp-mini-avatars" aria-hidden="true"><i>A</i><i>P</i><i>R</i><i>S</i></span><b>{settings?.student_count || '500+'}</b> Students</span><span><span className="lp-stars">★</span><b>{settings?.average_rating || '4.8'}</b> Rating</span><span><ShieldCheck size={17} />Job Ready</span><span><Infinity size={19} />Lifetime Access</span></div>
+      <div className="lp-hero-proof" data-testid="hero-trust-badges"><span><GraduationCap size={19} />6 Learning Modules</span><span><ShieldCheck size={17} />Beginner Friendly</span><span><Infinity size={19} />Lifetime Access</span></div>
     </div>
     <div className="lp-hero-bottom"><div className="lp-wrap"><span>ZERO CODING BACKGROUND. <b>UNLIMITED POSSIBILITIES.</b></span><a href="#curriculum" data-testid="explore-curriculum">Explore the course <span>↓</span></a></div></div>
   </section>
   <div className="lp-tools-band" aria-label="Tools you will learn"><div className="lp-wrap"><span>YOUR NEW<br /><b>SUPERPOWERS</b></span><div><i className="lp-tool-logo excel">X</i>Excel</div><div><i className="lp-tool-logo sql">≡</i>SQL</div><div><i className="lp-tool-logo powerbi">▥</i>Power BI</div><div><i className="lp-tool-logo tableau">✣</i>Tableau</div><div><Sparkles size={26} />ChatGPT</div></div></div>
 </>;
 
-export const CourseStack = () => <section className="lp-section lp-stack" id="course"><div className="lp-wrap">
+export const CourseStack = () => <section className="lp-section lp-stack" id="course" aria-label="Course skills"><div className="lp-wrap">
   <div className="lp-pain-points"><p>😮‍💨 Naukri nahi mil rahi?</p><p>📉 Skills purane ho gaye?</p><p>💸 Salary badhna band ho gaya?</p></div>
-  <div className="lp-section-top"><span className="lp-eyebrow">LESS FLUFF. MORE REAL-WORLD SKILLS.</span><span className="lp-section-number">01 / THE SKILL STACK</span></div>
-  <h2 className="lp-heading">Hum Fluff <span>Cut Kar Rahe Hain.</span></h2><p className="lp-section-description">Yeh Hai Exact Tech Stack Jo Aapko 2026 Mein Job Dilayega:</p>
+  <div className="lp-section-top"><span className="lp-eyebrow">PRACTICAL SKILLS. STEP BY STEP.</span><span className="lp-section-number">01 / THE SKILL STACK</span></div>
+  <p className="lp-section-description">Excel se AI tak — yeh hai aapka data analytics skill stack:</p>
   <div className="lp-stack-grid">{stack.map((item, i) => <article className={`lp-skill-card lp-skill-${item.color}`} key={item.tag} data-testid={`skill-card-${i}`}><div className="lp-skill-top"><span className="lp-skill-icon" aria-hidden="true">{item.icon}</span><span>0{i + 1}</span></div><span className="lp-skill-tag">{item.tag}</span><h3>{item.title}</h3><p>{item.detail}</p><span className="lp-skill-bottom">REAL SKILLS. REAL APPLICATION.<ArrowUpRight size={17} /></span></article>)}</div>
 </div></section>;
 
 export const Curriculum = () => <section className="lp-section lp-curriculum" id="curriculum"><div className="lp-wrap lp-two-col">
-  <div><span className="lp-eyebrow">YOUR STEP-BY-STEP ROADMAP</span><h2 className="lp-heading">Zero se<br /><span>job-ready tak.</span></h2><p className="lp-section-description">Ek clear path. Practical projects.<br />Apni pace pe, apne future ke liye.</p><div className="lp-curriculum-facts"><span><b>6</b> focused modules</span><span><b>24</b> week suggested roadmap</span></div><p className="lp-disclaimer">Suggested learning time; self-paced access has no expiry.</p><WebinarButton source="curriculum" className="lp-button-outline" >Pehle Free Webinar Dekho</WebinarButton></div>
-  <div className="lp-accordion">{curriculum.map((module, i) => <details key={module.title} data-testid={`curriculum-module-${i}`}><summary data-testid={`curriculum-toggle-${i}`}><span className="lp-module-number">0{i + 1}</span><span className="lp-module-title">{module.title}<small>{module.duration}{!module.unlocked && ' · Course access'}</small></span>{!module.unlocked && <LockKeyhole size={16} aria-label="Included with purchase" />}<span className="lp-expand">+</span></summary><div className="lp-accordion-content" data-testid={`curriculum-content-${i}`}>{module.topics.map(topic => <p key={topic}><Check size={15} />{topic}</p>)}</div></details>)}</div>
+  <div><span className="lp-eyebrow">YOUR STEP-BY-STEP ROADMAP</span><h2 className="lp-heading">Zero se<br /><span>job-ready tak.</span></h2><p className="lp-section-description">Ek clear path. Practical projects.<br />Apni pace pe, apne future ke liye.</p><div className="lp-curriculum-facts" data-testid="curriculum-facts"><span><b>6</b> focused modules</span><span><b><Infinity size={35} aria-label="Lifetime" /></b> lifetime revision</span></div><p className="lp-disclaimer">Self-paced learning; course access has no expiry.</p><WebinarButton source="curriculum" className="lp-button-outline" >Pehle Free Webinar Dekho</WebinarButton></div>
+  <div className="lp-accordion">{curriculum.map((module, i) => <details key={module.title} data-testid={`curriculum-module-${i}`}><summary data-testid={`curriculum-toggle-${i}`}><span className="lp-module-number">0{i + 1}</span><span className="lp-module-title">{module.title}{!module.unlocked && <small>Included with course access</small>}</span>{!module.unlocked && <LockKeyhole size={16} aria-label="Included with purchase" />}<span className="lp-expand">+</span></summary><div className="lp-accordion-content" data-testid={`curriculum-content-${i}`}>{module.topics.map(topic => <p key={topic}><Check size={15} />{topic}</p>)}</div></details>)}</div>
 </div></section>;
 
-export const Reviews = ({ reviews = [], settings, loading, error }) => {
+export const Reviews = ({ reviews = [], loading, error }) => {
   const scroll = useRef(null);
+  const hasRealReviews = reviews.some(review => !review.is_sample);
   return <section className="lp-section lp-reviews" id="reviews"><div className="lp-wrap">
     <div className="lp-section-top"><span className="lp-eyebrow">SMALL STEPS. BIG POSSIBILITIES.</span><span className="lp-section-number">03 / THE COMMUNITY</span></div>
-    <div className="lp-review-heading"><div><h2 className="lp-heading">Agli success story<br /><span>aapki ho sakti hai.</span></h2><p className="lp-review-summary" data-testid="reviews-summary"><span className="lp-stars">★★★★★</span> {settings?.student_count || '500+'} students, {settings?.average_rating || '4.8'}/5 average rating</p></div><div className="lp-scroll-buttons"><button data-testid="reviews-previous" aria-label="Previous reviews" onClick={() => scroll.current?.scrollBy({ left: -370, behavior: 'smooth' })}><ChevronLeft /></button><button data-testid="reviews-next" aria-label="Next reviews" onClick={() => scroll.current?.scrollBy({ left: 370, behavior: 'smooth' })}><ChevronRight /></button></div></div>
+    <div className="lp-review-heading"><div><h2 className="lp-heading">Learning journeys.<br /><span>Har story alag hai.</span></h2><p className="lp-review-summary" data-testid="reviews-summary">{hasRealReviews ? 'Learner experiences — individual results vary.' : 'Illustrative reviews · Not verified learner experiences'}</p></div><div className="lp-scroll-buttons"><button data-testid="reviews-previous" aria-label="Previous reviews" onClick={() => scroll.current?.scrollBy({ left: -370, behavior: 'smooth' })}><ChevronLeft /></button><button data-testid="reviews-next" aria-label="Next reviews" onClick={() => scroll.current?.scrollBy({ left: 370, behavior: 'smooth' })}><ChevronRight /></button></div></div>
     {reviews.some(r => r.is_sample) && <p className="lp-sample-notice" data-testid="sample-reviews-notice">Sample testimonials below are illustrative, not verified student outcomes.</p>}
     <div className="lp-review-track" ref={scroll} data-testid="reviews-track" tabIndex="0" aria-label="Student review cards">
-      {reviews.map((r, i) => <article className="lp-review-card" key={r.id} data-testid={`review-card-${i}`}><div className="lp-review-card-top"><span className="lp-stars" aria-label={`${r.rating} out of 5 stars`}>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>{r.is_sample && <span className="lp-sample-label">Sample</span>}</div><blockquote>{r.review_text}</blockquote><div className="lp-review-author"><span className={`lp-author-initial lp-author-${i % 4}`}>{r.name.split(' ').map(n => n[0]).slice(0, 2).join('')}</span><div><strong>{r.name}</strong>{r.role && <span>{r.role}</span>}</div><span className="lp-quote-mark" aria-hidden="true">”</span></div></article>)}
+      {reviews.map((review, index) => <ReviewCard key={review.id} review={review} index={index} />)}
     </div>
     {loading && <p role="status" data-testid="reviews-loading">Loading reviews…</p>}{error && <p role="status" data-testid="reviews-error">Reviews are temporarily unavailable.</p>}{!loading && !error && !reviews.length && <p data-testid="reviews-empty">Student stories are coming soon.</p>}
   </div></section>;

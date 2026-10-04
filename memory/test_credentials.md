@@ -10,6 +10,7 @@
 - API-only preview users: `admin@meramentor.in` (admin, referral `MMTESTADMIN`) and `test@meramentor.in` (user, referral `MMTESTUSER`). No app passwords: Google OAuth is used for real login.
 - Current 48-hour test session tokens are in `/app/.local/test.env`: `ADMIN_SESSION`, `USER_SESSION`. These sessions are test fixtures, not a public login bypass. Set browser `session_token` cookie on the current preview domain for admin UI testing.
 - Existing fixture sessions renewed on 2026-09-28 for 48 hours for category-form regression; token values and account roles unchanged. No app login or OAuth behavior modified.
+- Same fixture sessions renewed on 2026-10-03 for 48 hours for landing trust-content and Google-dashboard regression; token values/roles unchanged. Production credentials and publishing settings untouched.
 - Local PostgreSQL data is under `/app/.local/postgresql` (ignored by git), using database settings from backend `.env`.
 - `PREVIEW_POSTGRES_DATA` in backend `.env` opts into the guarded persistent local bootstrap. After inactivity, server startup restores this exact existing data, not an empty system cluster. Do not remove the data directory or initialize a replacement database. Supabase configurations must NOT set this preview-only flag.
 - Preview bootstrap also uses `PREVIEW_POSTGRES_BIN` and `PREVIEW_RUNUSER` from backend `.env`, avoiding supervisor's minimal PATH after inactivity. PostgreSQL system runtime remains required. No production database setting changed.

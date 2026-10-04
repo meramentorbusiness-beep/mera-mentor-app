@@ -4,9 +4,8 @@ import { LayoutDashboard, Users, Wallet, BookOpen, LogOut, Menu, X, Shield, Trop
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
-import { toast } from "sonner";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -25,58 +24,22 @@ export default function Layout() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [notifOpen, setNotifOpen] = useState(false);
-  const sseRef = useRef(null);
 
   const allNav = user?.is_admin ? [...navItems, { path: "/admin/courses", label: "Admin", icon: Shield }] : navItems;
 
-  // SSE for real-time notifications
+  // Use the supported unread-count endpoint; there is no notification stream API.
   useEffect(() => {
-    fetchUnread();
-    
-    // Setup SSE connection
-    const setupSSE = () => {
+    let active = true;
+    const fetchUnread = async () => {
       try {
-        const eventSource = new EventSource(`${API}/notifications/stream`, { withCredentials: true });
-        sseRef.current = eventSource;
-        
-        eventSource.addEventListener("notification", (e) => {
-          const data = JSON.parse(e.data);
-          setUnreadCount(data.unread_count);
-          // Show toast for new notification
-          toast.info(data.title, { description: data.message, duration: 5000 });
-        });
-        
-        eventSource.addEventListener("unread_count", (e) => {
-          const data = JSON.parse(e.data);
-          setUnreadCount(data.count);
-        });
-        
-        eventSource.onerror = () => {
-          // Fallback to polling if SSE fails
-          eventSource.close();
-          sseRef.current = null;
-        };
-      } catch {
-        // SSE not supported, fallback to polling
-      }
+        const response = await axios.get(`${API}/notifications/unread-count`, { withCredentials: true });
+        if (active) setUnreadCount(response.data.count);
+      } catch {}
     };
-    
-    setupSSE();
-    
-    // Fallback polling
+    fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
-    
-    return () => {
-      clearInterval(interval);
-      if (sseRef.current) {
-        sseRef.current.close();
-      }
-    };
+    return () => { active = false; clearInterval(interval); };
   }, []);
-
-  const fetchUnread = async () => {
-    try { const res = await axios.get(`${API}/notifications/unread-count`, { withCredentials: true }); setUnreadCount(res.data.count); } catch {}
-  };
 
   const openNotifs = async () => {
     try {

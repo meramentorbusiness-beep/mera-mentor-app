@@ -38,7 +38,7 @@ SAMPLES = [
 
 async def initialize_landing(db):
     # create_all doesn't migrate existing SQL tables. These additions are repeatable.
-    for definition in ["name VARCHAR(100)", "role VARCHAR(160)",
+    for definition in ["name VARCHAR(100)", "role VARCHAR(160)", "outcome VARCHAR(80) DEFAULT ''",
                        "display_order INTEGER DEFAULT 0", "is_landing BOOLEAN DEFAULT FALSE",
                        "is_sample BOOLEAN DEFAULT FALSE"]:
         await db.execute(text(f"ALTER TABLE reviews ADD COLUMN IF NOT EXISTS {definition}"))
