@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Simplify category management to one field in the existing Create/Edit Course form: select database category or type a new name, created only when course saves. Remove standalone category management UI, write routes and unused code. Preserve course video/resource attachments. No new page or category management flow."
+user_problem_statement: "Update Data Analytics landing to no-coding/2-month headline; remove Hum Fluff line and unspecified module durations; add honest job/learning commitments, genuine-only optional outcome tags while retaining labelled samples, no fabricated stats, repeatedCTAs; connect Google landing sign-in and existing dashboard. No publishing."
 
 backend:
   - task: "Update course saves resources"

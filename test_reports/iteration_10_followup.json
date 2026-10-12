@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-12",
+  "status": "pass_with_external_manual_checks",
+  "backend": {"passed": 19, "failed": 0, "junit": "/app/test_reports/pytest/pytest_iteration10_final.xml"},
+  "production_build_only": {"passed": true, "main_js_gzip_kb": 99.01, "main_css_gzip_kb": 8.53},
+  "ui_fixes_verified": [
+    "Linked-course shadcn Select works; native select/option nesting warnings eliminated",
+    "Review outcome editor disabled for samples, enabled for genuine reviews",
+    "No nonexistent notifications/stream requests or associated404s",
+    "Razorpay SDK not loaded on admin/dashboard unless purchase initiated",
+    "Authenticated landing Dashboard link opens protected dashboard",
+    "Guest Google entry opens real provider sign-in without redirect mismatch"
+  ],
+  "expected_console_response": "One401initial unauthenticated /auth/me session probe, not a failure of authenticated dashboard access",
+  "infrastructure_followup": "Preview runtime restore race handled by bounded executable-availability wait. Existing database preserved; health200. Test fixtures renewed after correct48-hour expiry during9-day user pause.",
+  "unverified_external_steps": ["Human Google consent and complete real callback", "Captured real payment", "Real mobile-network load target"],
+  "content_needed": ["Genuine learner testimonials and concrete reported outcomes", "Dated source-linked market salary/opening/growth figures"],
+  "current_testimonial_content": "20 clearly labelled generatedSAMPLEreviews; no invented genuine outcome badges",
+  "runtime_mocked_apis": [],
+  "published": false
+}

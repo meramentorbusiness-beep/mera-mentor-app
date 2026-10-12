@@ -7,6 +7,8 @@ import asyncio
 import os
 import socket
 import subprocess
+import time
+import logging
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -29,8 +31,18 @@ def _start_preview_database():
     # Supervisor can have a minimal PATH after inactivity; use configured executables.
     bindir = Path(os.environ["PREVIEW_POSTGRES_BIN"])
     runuser = os.environ["PREVIEW_RUNUSER"]
-    if not (bindir / "pg_ctl").is_file():
-        raise RuntimeError("The configured preview PostgreSQL runtime is unavailable")
+    # Runtime files can be restored just after the preview's app process starts.
+    # A failed Uvicorn child otherwise stays offline until a code reload.
+    executables = [bindir / "pg_ctl", bindir / "postgres", Path(runuser)]
+    deadline = time.monotonic() + 120
+    waiting = False
+    while not all(path.is_file() and os.access(path, os.X_OK) for path in executables):
+        if time.monotonic() >= deadline:
+            raise RuntimeError("The configured preview PostgreSQL runtime was not restored within 120 seconds")
+        if not waiting:
+            logging.warning("Waiting for the configured preview database runtime to be restored")
+            waiting = True
+        time.sleep(1)
     # Paths are resolved server configuration, never derived from a web request.
     def quoted(value):
         return str(value).replace("'", "''")

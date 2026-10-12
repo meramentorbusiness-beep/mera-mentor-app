@@ -284,3 +284,49 @@ Remove the separate folder/category management section. Inside the existing Crea
 - **Unchanged blocker**: actual R2 uploads cannot be verified/used in this preview without storage credentials. Attachment URL preservation was tested with explicit fixtures, not simulated upload success. No runtime category API is mocked.
 - **Earlier backlog**: actual landing-course content, real Google user consent/full payment verification, provider credentials and full quiz regression remain as listed above; old standalone category-management tasks are superseded by this inline flow.
 - **Optional future usability improvement**: a category filter on the existing course list only if requested; no additional management page.
+
+## Landing Copy, Trust & Dashboard Connection — 2026-10-03 to 2026-10-12
+
+### Latest user request / choices
+- Main heading: keep both no-coding-background and two-month timeline. Remove “Hum Fluff Cut Kar Rahe Hain” entirely, no replacement heading in that slot.
+- Add original trust-building inspired by bootcamp structure: honest job disclaimer with concrete learning/support commitments, optional outcome labels for real testimonials, market statistics ONLY with credible sources, repeat CTAs after important sections.
+- Connect landing to existing dashboard via Google authentication. Show before/after copy and distinguish completed work from missing real data.
+- Explicit choices: **leave module timings unspecified** (do not convert to an eight-week module plan); **keep clearly labelled sample reviews**.
+- User previously stopped publishing. No publish/redeploy performed for this work; all verification is in preview. User returned after credit recharge on2026-10-12; continue same task, not new scope.
+
+### Before → after
+- Old H1: “6 Mahine Mein Data Analyst Ban Jao.” Old subline: “Bina Coding Background Ke.”
+- New H1: **“No Coding Background? Become a Data Analyst in 2 Months.”** New subline: “Excel se AI tak. Step by step, apni pace pe.”
+- “Hum Fluff Cut Kar Rahe Hain.” → deleted, with no replacement headline. Existing adjacent skills description now says “Excel se AI tak — yeh hai aapka data analytics skill stack”, avoiding the earlier job-guarantee phrasing.
+- Removed all module duration fields and the24-week roadmap total. Six modules and lifetime revision remain; no invented replacement durations. Updated HTML description/title and runtime landing title.
+
+### Implemented
+- `LearningPromise.js`: original section after skills, “Skills par focus. Job ki guarantee nahi.” States hiring depends on practice/portfolio/interviews/market and two months is a learning goal, NOT a placement deadline. Commitments limited to existing offering: practical learning, webinar doubt support, lifetime access.
+- CTAs retained in hero, curriculum, pricing, final block and sticky bar; added webinar/pricing links immediately after trust section, with existing referral/event tracking.
+- Public hero now uses course facts (six modules, beginner friendly, lifetime access) instead of unverified500+/4.8 totals. Review summary no longer presents generated reviews as measured student satisfaction.
+- Twenty SAMPLE testimonials remain publicly labelled per user choice. `Review.outcome` optional80-character field, repeatable migration, admin editor and API serialization/validation. Genuine reviews can have manually supplied concrete outcomes; samples have outcomes cleared server-side and never receive outcome badges. No genuine outcomes invented.
+- `ReviewCard.js` handles safe optional outcome display. `LandingReviewEditor.js` extracts existing editor, adds outcome guidance and disables outcome field whileSample is selected. Unsupported aggregate-stat inputs removed from admin form; old metadata retained for backward-compatible settings saves only.
+- `AccountButton.js`: Google sign-in at header and signup section for guests; Instagram/Facebook still receive external-browser guidance (noOTP). Existing authenticated users receive direct header/final Dashboard links.
+- Landing checks existing secure server session at `/api/auth/me`, rather than trusting localStorage. Existing direct Google OAuth callback already saves session cookie and redirects signup to `/dashboard`; this flow preserved. Purchase intent still resumes checkout. No provider replacement or auth credentials exposed.
+- Follow-up fixes from testing: replaced linked-course native select causing invalidDOM nesting with existing shadcn Select; removed requests to nonexistent notification-stream endpoint while preserving supported unread-count polling; deferred RazorpaySDK on admin/dashboard as well as landing using shared `/src/lib/razorpay.js`. Marketplace loads SDK on purchase and no longer has an obsolete fake-success demo branch.
+
+### Not added / real content needed
+- No market salary/openings/demand-growth strip added. Need dated, source-linked numbers for the intended job market. Competitor statistics were NOT copied or presented as Mera Mentor results.
+- No real testimonial outcomes currently exist in preview: all20 initial reviews are samples. Admin capability is ready; owner must provide authentic testimonials and learner-reported outcomes before showing real tags.
+- Existing salary ROI calculator remains explicitly an illustrative scenario, not a sourced average, forecast or guaranteed income. It was not relabelled as market research.
+- Structure reference only: https://codebasics.io/bootcamps/data-analytics-bootcamp-with-practical-job-assistance (clear expectation-setting, outcomes, repeat CTAs). No competitor text, counts, refund policy, community or placement services copied.
+
+### Verification
+- Agent report `/app/test_reports/iteration_10.json`: newreview outcome/backend regressions19passed; copy, removedtimings, sample labeling, repeatedCTAs, Instagram behavior and responsive320/375/390/428/768/1024/1440 verified. Main smoke image `/app/.local/trust-page-smoke.jpg`.
+- Main follow-up after fixes: linked-course selector and genuine/sample outcome editor pass, no invalid-select/hydration warnings, no404stream requests; checkout SDK absent until needed. One expected401from initial unauthenticated session probe is not a login failure.
+- Browser test confirmed authenticated landing → existing protecteddashboard and guest Google entry → real Google sign-in form without redirect mismatch. Actual human Google consent/token callback has NOT been automated; owner should complete one real sign-in.
+- Final production BUILD (not publish) passes2026-10-12: mainJS99.01KB gzip, mainCSS8.53KB gzip. Dashboard chunks remain deferred.
+- Final pytest rerun: **19/19 passed**, `/app/test_reports/pytest/pytest_iteration10_final.xml`. No runtime APIs mocked. Temporary real-labelled outcome test reviews were deleted; finalpayment-fixture course/pendingpurchase from this run cleaned without touching actual content.
+- Credit-pause/resume restored runtime files after app startup, leaving failed Uvicorn child offline. Added bounded120s wait for configured preview executables in opt-in helper; no credentials/ports/defaultDBs changed. Backend recovered with preserved data andhealth200. Prior investigation's supervisor-env hypothesis was not supported by the trace: .env is loaded and failure was the explicit executable-availability check, notKeyError. No supervisor secrets were copied into system config.
+- During the nine-day pause,48-hour test sessions correctly expired. Only existing isolated test fixtures were renewed2026-10-12; real-user Google session/auth logic unchanged.
+
+### Remaining priorities
+- **P0 current request**: no known code blocker; user review of before/after and one actual Google sign-in remain.
+- **P1 content**: authentic testimonials/outcomes and dated market statistics; mentor-experience/source verification from earlier notes remains.
+- **Unchanged earlier blockers**: actual landing course remains draft until real content/linking; paymentsTESTmode, webhook secret absent, R2/email credentials absent. Production requires externalPostgreSQL configuration per earlier deploymentRCA; do NOT retry publishing without userrequest.
+- **Optional trust improvement**: add a consenting learner’s real project snapshot alongside their reported outcome, when authentic evidence is available.
