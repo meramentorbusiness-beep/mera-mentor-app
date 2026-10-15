@@ -26,13 +26,14 @@ from models.models import (
     PurchaseStatus, CommissionStatus, PayoutStatus
 )
 from services.course_categories import category_options, resolve_course_category
+from lib.settings import cors_origins, frontend_url
 
 app = FastAPI(title="Mera Mentor API", version="2.0.0")
 
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.environ["FRONTEND_URL"].rstrip("/")],
+    allow_origins=cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,15 +43,15 @@ api_router = APIRouter(prefix="/api")
 
 # Commission levels from environment (5 levels: 40%, 12%, 6%, 3%, 1% = 62% total)
 COMMISSION_LEVELS = {
-    1: float(os.environ.get("COMMISSION_L1", "40")) / 100,
-    2: float(os.environ.get("COMMISSION_L2", "12")) / 100,
-    3: float(os.environ.get("COMMISSION_L3", "6")) / 100,
-    4: float(os.environ.get("COMMISSION_L4", "3")) / 100,
-    5: float(os.environ.get("COMMISSION_L5", "1")) / 100,
+    1: float(os.environ.get("COMMISSION_L1", "").strip() or "40") / 100,
+    2: float(os.environ.get("COMMISSION_L2", "").strip() or "12") / 100,
+    3: float(os.environ.get("COMMISSION_L3", "").strip() or "6") / 100,
+    4: float(os.environ.get("COMMISSION_L4", "").strip() or "3") / 100,
+    5: float(os.environ.get("COMMISSION_L5", "").strip() or "1") / 100,
 }
 MIN_WITHDRAWAL = 100
 ADMIN_EMAILS = [e.strip() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()]
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://meramentor.in")
+FRONTEND_URL = frontend_url()
 
 # Razorpay
 RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
@@ -2013,6 +2014,8 @@ async def delete_media(media_id: str, admin: dict = Depends(require_admin), db: 
 @api_router.get("/media/files/{file_key:path}")
 async def serve_media_file(file_key: str):
     """Proxy media file from cloud object storage"""
+    if not is_storage_enabled():
+        raise HTTPException(503, "Cloudflare R2 is not configured")
     try:
         data, ct = await storage_download(file_key)
         return Response(content=data, media_type=ct)

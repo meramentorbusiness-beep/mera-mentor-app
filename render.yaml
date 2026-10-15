@@ -4,6 +4,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
+    healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
         sync: false
@@ -48,7 +49,8 @@ services:
       - key: CLOUDFLARE_R2_BUCKET_NAME
         sync: false
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: mera-mentor
-          property: host
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: WEBINAR_SIGNUP_URL
+        sync: false

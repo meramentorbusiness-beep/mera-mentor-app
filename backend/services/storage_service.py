@@ -29,7 +29,7 @@ _R2_ENV_VARS = (
 
 def is_storage_enabled() -> bool:
     """True only when all R2 settings are present."""
-    return all(os.environ.get(name) for name in _R2_ENV_VARS)
+    return all(os.environ.get(name, "").strip() for name in _R2_ENV_VARS)
 
 
 @lru_cache(maxsize=1)
@@ -40,12 +40,12 @@ def _client():
             "CLOUDFLARE_R2_ACCESS_KEY_ID, CLOUDFLARE_R2_SECRET_ACCESS_KEY, "
             "and CLOUDFLARE_R2_BUCKET_NAME."
         )
-    account_id = os.environ["CLOUDFLARE_R2_ACCOUNT_ID"]
+    account_id = os.environ.get("CLOUDFLARE_R2_ACCOUNT_ID", "").strip()
     return boto3.client(
         "s3",
         endpoint_url=f"https://{account_id}.r2.cloudflarestorage.com",
-        aws_access_key_id=os.environ["CLOUDFLARE_R2_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["CLOUDFLARE_R2_SECRET_ACCESS_KEY"],
+        aws_access_key_id=os.environ.get("CLOUDFLARE_R2_ACCESS_KEY_ID", "").strip(),
+        aws_secret_access_key=os.environ.get("CLOUDFLARE_R2_SECRET_ACCESS_KEY", "").strip(),
         region_name="auto",  # R2 does not use standard AWS regions
         config=Config(
             signature_version="s3v4",
@@ -56,7 +56,10 @@ def _client():
 
 
 def _bucket() -> str:
-    return os.environ["CLOUDFLARE_R2_BUCKET_NAME"]
+    name = os.environ.get("CLOUDFLARE_R2_BUCKET_NAME", "").strip()
+    if not name:
+        raise RuntimeError("CLOUDFLARE_R2_BUCKET_NAME is required for storage operations")
+    return name
 
 
 def init_storage() -> None:

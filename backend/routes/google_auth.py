@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lib.database import get_db
 from models.models import User, UserSession
 from routes.landing import record_event
+from lib.settings import frontend_url
 
 router = APIRouter(prefix="/api/auth/google", tags=["google-auth"])
 
@@ -34,10 +35,19 @@ def _env(name: str, required: bool = True) -> str:
     val = os.environ.get(name, "").strip()
     if required and not val:
         raise HTTPException(
-            status_code=500,
+            status_code=503,
             detail=f"{name} is not set on the server. See README for OAuth setup.",
         )
     return val
+
+
+def _check_google_config():
+    names = ("FRONTEND_URL", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI", "SESSION_SECRET")
+    missing = [name for name in names if not os.environ.get(name, "").strip()]
+    if missing:
+        raise HTTPException(503, f"Google sign-in is not configured. Missing: {', '.join(missing)}")
+    if not frontend_url():
+        raise HTTPException(503, "FRONTEND_URL must be a full HTTP(S) origin, without a path or comma-separated URLs")
 
 
 def _serializer() -> URLSafeTimedSerializer:
@@ -55,6 +65,7 @@ async def google_login(ref: str | None = Query(default=None, max_length=100),
                        browser_type: Literal["instagram", "facebook", "browser"] = "browser",
                        intent: Literal["signup", "purchase"] = "signup"):
     """Redirect the user to Google's consent screen."""
+    _check_google_config()
     client_id = _env("GOOGLE_CLIENT_ID")
     redirect_uri = _env("GOOGLE_REDIRECT_URI")
     ref = ref.strip() if ref else None
@@ -100,8 +111,9 @@ async def google_callback(
 ):
     """Handle Google's redirect: exchange code, verify id_token, issue session cookie."""
     # REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    frontend_url = _env("FRONTEND_URL").rstrip("/")
-    login_url = f"{frontend_url}/courses/data-analytics"
+    _check_google_config()
+    frontend_base = frontend_url()
+    login_url = f"{frontend_base}/courses/data-analytics"
 
     if error:
         return RedirectResponse(f"{login_url}?{urlencode({'auth_error': error})}", status_code=302)
@@ -230,14 +242,14 @@ async def google_callback(
     await db.commit()
 
     # 6) Redirect back to the frontend with cookie
-    dashboard_url = f"{frontend_url}/dashboard"
+    dashboard_url = f"{frontend_base}/dashboard"
     if state_data.get("intent") == "purchase":
         query = {"checkout": "1", "source_browser": state_data.get("browser_type", "browser")}
         if state_data.get("visitor_id"):
             query["visitor"] = state_data["visitor_id"]
         if state_data.get("ref"):
             query["ref"] = state_data["ref"]
-        dashboard_url = f"{frontend_url}/courses/data-analytics?{urlencode(query)}#pricing"
+        dashboard_url = f"{frontend_base}/courses/data-analytics?{urlencode(query)}#pricing"
     resp = RedirectResponse(dashboard_url, status_code=302)
     resp.delete_cookie("google_oauth_state", path="/api/auth/google")
     resp.set_cookie(

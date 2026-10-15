@@ -44,7 +44,7 @@ COPY backend/ ./
 # React build output → /app/static/
 COPY --from=frontend-builder /frontend/build ./static
 
-# Render injects PORT; fall back to 8001 for local docker run
+# Render injects PORT; local Docker Compose supplies it explicitly.
 EXPOSE 8001
 
-CMD ["sh", "-c", "uvicorn server:app --host 0.0.0.0 --port ${PORT:-8001}"]
+CMD ["sh", "-c", ": \"${PORT:?PORT environment variable is required}\"; exec uvicorn server:app --host 0.0.0.0 --port \"${PORT}\""]

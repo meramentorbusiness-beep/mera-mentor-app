@@ -12,11 +12,11 @@ from services.email_service import send_commission_earned
 
 # Commission rates from environment (default: 40%, 12%, 6%, 3%, 1%)
 COMMISSION_RATES = {
-    1: float(os.environ.get("COMMISSION_L1", "40")) / 100,
-    2: float(os.environ.get("COMMISSION_L2", "12")) / 100,
-    3: float(os.environ.get("COMMISSION_L3", "6")) / 100,
-    4: float(os.environ.get("COMMISSION_L4", "3")) / 100,
-    5: float(os.environ.get("COMMISSION_L5", "1")) / 100,
+    1: float(os.environ.get("COMMISSION_L1", "").strip() or "40") / 100,
+    2: float(os.environ.get("COMMISSION_L2", "").strip() or "12") / 100,
+    3: float(os.environ.get("COMMISSION_L3", "").strip() or "6") / 100,
+    4: float(os.environ.get("COMMISSION_L4", "").strip() or "3") / 100,
+    5: float(os.environ.get("COMMISSION_L5", "").strip() or "1") / 100,
 }
 
 def get_commission_levels() -> List[Dict]:

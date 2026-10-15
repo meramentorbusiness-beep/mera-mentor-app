@@ -11,13 +11,19 @@ import time
 import logging
 from pathlib import Path
 from urllib.parse import urlsplit
+from lib.settings import preview_database_enabled
 
 
 def _start_preview_database():
-    directory = os.environ.get("PREVIEW_POSTGRES_DATA")
-    if not directory:
+    if not preview_database_enabled():
         return
-    target = urlsplit(os.environ["DATABASE_URL"])
+    directory = os.environ.get("PREVIEW_POSTGRES_DATA", "").strip()
+    database_url = os.environ.get("DATABASE_URL", "").strip()
+    if not database_url:
+        raise RuntimeError("DATABASE_URL environment variable is required")
+    target = urlsplit(database_url)
+    if target.hostname not in {"127.0.0.1", "localhost"}:
+        return  # External PostgreSQL never needs a local bootstrap.
     if target.hostname not in {"127.0.0.1", "localhost"} or not target.port:
         raise RuntimeError("Preview database startup requires an explicit loopback DATABASE_URL and port")
     data = Path(directory).resolve()
@@ -29,8 +35,12 @@ def _start_preview_database():
     except OSError:
         pass
     # Supervisor can have a minimal PATH after inactivity; use configured executables.
-    bindir = Path(os.environ["PREVIEW_POSTGRES_BIN"])
-    runuser = os.environ["PREVIEW_RUNUSER"]
+    binary_path = os.environ.get("PREVIEW_POSTGRES_BIN", "").strip()
+    runuser = os.environ.get("PREVIEW_RUNUSER", "").strip()
+    if not binary_path or not runuser:
+        logging.warning("Skipping local database bootstrap: PREVIEW_POSTGRES_BIN or PREVIEW_RUNUSER is missing")
+        return
+    bindir = Path(binary_path)
     # Runtime files can be restored just after the preview's app process starts.
     # A failed Uvicorn child otherwise stays offline until a code reload.
     executables = [bindir / "pg_ctl", bindir / "postgres", Path(runuser)]

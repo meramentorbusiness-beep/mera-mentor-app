@@ -3,12 +3,13 @@ import os
 import resend
 from typing import Optional
 from datetime import datetime
+from lib.settings import frontend_url
 
 # Configuration
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "noreply@meramentor.in")
 RESEND_SUPPORT_EMAIL = os.environ.get("RESEND_SUPPORT_EMAIL", "support@meramentor.in")
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://meramentor.in")
+FRONTEND_URL = frontend_url()
 
 # Initialize Resend
 if RESEND_API_KEY:
@@ -16,7 +17,7 @@ if RESEND_API_KEY:
 
 def is_email_enabled() -> bool:
     """Check if email service is configured"""
-    return bool(RESEND_API_KEY)
+    return bool(RESEND_API_KEY.strip() and RESEND_FROM_EMAIL.strip() and FRONTEND_URL)
 
 def _format_inr(amount: float) -> str:
     """Format amount in INR"""

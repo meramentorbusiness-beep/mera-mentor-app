@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
+from lib.settings import preview_database_enabled
 
 load_dotenv()
 
@@ -32,6 +33,10 @@ else:
 # asyncpg does not accept the libpq-style `?sslmode=...` query parameter.
 # Strip it — SSL is enforced via connect_args["ssl"] below.
 parts = urlsplit(DATABASE_URL)
+if parts.scheme != "postgresql+asyncpg" or not parts.hostname:
+    raise RuntimeError("DATABASE_URL must be a valid PostgreSQL connection URL")
+if os.environ.get("RENDER", "").strip().lower() == "true" and parts.hostname in {"127.0.0.1", "localhost", "::1"}:
+    raise RuntimeError("DATABASE_URL must point to an external PostgreSQL database on Render, not a preview-only loopback address")
 if parts.query:
     kept = "&".join(
         kv for kv in parts.query.split("&")
@@ -51,7 +56,7 @@ engine = create_async_engine(
     echo=os.environ.get("NODE_ENV") == "development",
     poolclass=NullPool,
     connect_args={
-        "ssl": False if os.environ.get("PREVIEW_POSTGRES_DATA") and parts.hostname in {"127.0.0.1", "localhost"} else "require",
+        "ssl": False if preview_database_enabled() and parts.hostname in {"127.0.0.1", "localhost"} else "require",
         "statement_cache_size": 0,
         "server_settings": {"application_name": "mera_mentor"},
     },

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lib.database import get_db
 from models.models import Course, LandingPage, LandingEvent, Review
 from services.landing_seed import SLUG
+from lib.settings import frontend_url
 
 
 class SettingsInput(BaseModel):
@@ -100,10 +101,10 @@ def create_landing_router(require_admin):
                                    .order_by(Review.display_order, Review.created_at))).scalars().all()
         response.headers["Cache-Control"] = "public, max-age=15"
         return {"settings": settings, "reviews": [serialize_review(r) for r in reviews],
-                "webinar_url": os.environ["WEBINAR_SIGNUP_URL"],
+                "webinar_url": os.environ.get("WEBINAR_SIGNUP_URL", "").strip(),
                 "checkout_ready": bool(course and course.published and course.price == 1299 and os.environ.get("RAZORPAY_KEY_ID")),
                 "payment_mode": "test" if os.environ.get("RAZORPAY_KEY_ID", "").startswith("rzp_test_") else "live",
-                "google_ready": all(os.environ.get(k) for k in ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI", "SESSION_SECRET"])}
+                "google_ready": bool(frontend_url()) and all(os.environ.get(k, "").strip() for k in ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI", "SESSION_SECRET"])}
 
     @router.post("/landing/events", status_code=202)
     async def track(body: EventInput, db: AsyncSession = Depends(get_db)):

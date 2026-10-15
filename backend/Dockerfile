@@ -4,7 +4,6 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV PORT=8001
 
 # Set work directory
 WORKDIR /app
@@ -30,7 +29,7 @@ EXPOSE 8001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/health')" || exit 1
+    CMD python -c "import os,sys,urllib.request; p=os.environ.get('PORT'); sys.exit('PORT environment variable is required') if not p else urllib.request.urlopen('http://127.0.0.1:'+p+'/api/health', timeout=5)" || exit 1
 
 # Run the application
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["sh", "-c", ": \"${PORT:?PORT environment variable is required}\"; exec uvicorn server:app --host 0.0.0.0 --port \"${PORT}\""]
