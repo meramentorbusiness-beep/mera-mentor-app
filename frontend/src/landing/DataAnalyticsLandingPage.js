@@ -5,8 +5,16 @@ import { Hero, CourseStack, Curriculum, Reviews, Instructor, Pricing, FAQ, Webin
 import { SalaryCalculator, ReferralCalculator } from './Calculators';
 import { BrowserDialog, LegalDialog } from './Dialogs';
 import { LearningPromise } from './LearningPromise';
-import { AccountButton } from './AccountButton';
+import { AccountButton, FindCoursesButton } from './AccountButton';
 import './landing.css';
+
+const AUTH_ERRORS = {
+  cancelled: 'Google sign-in was cancelled. Tap Find Courses to try again.',
+  expired: 'Your sign-in took too long. Tap Find Courses to try again.',
+  unverified_email: 'Please use a Google account with a verified email address.',
+  not_configured: 'Google sign-in is temporarily unavailable. Please try again shortly.',
+  failed: "Google sign-in didn't complete. Tap Find Courses to try again.",
+};
 
 export default function DataAnalyticsLandingPage() {
   const [data, setData] = useState(null);
@@ -18,6 +26,7 @@ export default function DataAnalyticsLandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState(null);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [authNotice, setAuthNotice] = useState('');
   const viewed = useRef(false);
   const resumed = useRef(false);
   const inApp = isInAppBrowser();
@@ -36,7 +45,12 @@ export default function DataAnalyticsLandingPage() {
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     const authError = new URLSearchParams(window.location.search).get('auth_error');
-    if (authError) setNotice('Google sign-in complete nahi hua. Dobara try karein, ya free webinar join karein.');
+    if (authError) {
+      setAuthNotice(AUTH_ERRORS[authError] || AUTH_ERRORS.failed);
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('auth_error');
+      window.history.replaceState(window.history.state, '', `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+    }
     return () => { active = false; window.removeEventListener('scroll', onScroll); };
   }, []);
 
@@ -45,8 +59,13 @@ export default function DataAnalyticsLandingPage() {
     if (checkingSession) return;
     if (user) { window.location.assign('/dashboard'); return; }
     if (inApp) return openBrowser();
-    if (data && !data.google_ready) return setNotice('Google sign-in is temporarily unavailable. Aap free webinar directly join kar sakte hain.');
+    if (data && !data.google_ready) return setAuthNotice('Google sign-in is temporarily unavailable. Please try again shortly.');
+    track('course_click', 'find-courses');
     googleLogin('signup');
+  };
+  const logout = async () => {
+    try { await api('/auth/logout', { method: 'POST', body: '{}' }); } catch { /* session is cleared locally either way */ }
+    setUser(null);
   };
 
   const buy = async source => {
@@ -89,19 +108,20 @@ export default function DataAnalyticsLandingPage() {
 
   return <div className="lp" data-testid="data-analytics-landing">
     {inApp && <div className="lp-webview-banner" data-testid="instagram-webview-banner"><span>📱 Best experience ke liye tap karein ⋮ → Open in Browser</span><button data-testid="banner-open-browser" onClick={openBrowser} aria-label="Open in Browser"><ExternalLink size={18} /></button></div>}
-    <header className="lp-header"><div className="lp-wrap"><a className="lp-brand" href="/courses/data-analytics" aria-label="Mera Mentor home" data-testid="landing-brand"><span className="lp-brand-icon"><BarChart3 size={24} /></span><span>mera<span className="lp-orange">mentor</span><small>SEEKHO. SIKHAO. KAMAO.</small></span></a><nav aria-label="Course navigation"><a href="#course" data-testid="nav-course">The course</a><a href="#curriculum" data-testid="nav-curriculum">Curriculum</a><a href="#reviews" data-testid="nav-reviews">Reviews</a><a href="#faq" data-testid="nav-faq">FAQs</a></nav><AccountButton user={user} inApp={inApp} checking={checkingSession} onSignIn={signup} compact /></div></header>
+    <header className="lp-header"><div className="lp-wrap"><a className="lp-brand" href="/courses/data-analytics" aria-label="Mera Mentor home" data-testid="landing-brand"><span className="lp-brand-icon"><BarChart3 size={24} /></span><span>mera<span className="lp-orange">mentor</span><small>SEEKHO. SIKHAO. KAMAO.</small></span></a><nav aria-label="Course navigation"><a href="#course" data-testid="nav-course">The course</a><a href="#curriculum" data-testid="nav-curriculum">Curriculum</a><a href="#reviews" data-testid="nav-reviews">Reviews</a><a href="#faq" data-testid="nav-faq">FAQs</a></nav><AccountButton user={user} inApp={inApp} checking={checkingSession} onSignIn={signup} onLogout={logout} compact /></div></header>
+    {authNotice && <div className="lp-auth-error" role="alert" data-testid="auth-error-banner"><div className="lp-wrap"><span>{authNotice}</span><button type="button" onClick={() => setAuthNotice('')} aria-label="Dismiss" data-testid="auth-error-dismiss">×</button></div></div>}
     <main>
-      <Hero webinarUrl={data?.webinar_url} />
+      <Hero webinarUrl={data?.webinar_url} findCourses={<FindCoursesButton inApp={inApp} checking={checkingSession} onClick={signup} source="hero" className="lp-button lp-button-outline" />} />
       <CourseStack />
       <LearningPromise webinarUrl={data?.webinar_url} />
       <SalaryCalculator />
       <ReferralCalculator />
-      <Curriculum />
+      <Curriculum webinarUrl={data?.webinar_url} />
       <Reviews reviews={data?.reviews} loading={!data && !contentError} error={contentError} />
       <Instructor settings={settings} />
       <Pricing settings={settings} onBuy={buy} busy={busy} paymentMode={data?.payment_mode} />
       <FAQ experience={settings?.instructor_experience} />
-      <section className="lp-section lp-final" id="signup"><div className="lp-wrap"><span className="lp-eyebrow">YOUR FUTURE SELF WILL THANK YOU.</span><h2 className="lp-heading">Scrolling se aage badho.<br /><span>Apni story badlo.</span></h2><p>Pehla step free hai. Bas shuru toh karo.</p><div className="lp-final-actions"><WebinarButton source="final" url={data?.webinar_url}>Free Webinar</WebinarButton><button className="lp-button lp-button-outline" data-testid="buy-course-final" disabled={busy} onClick={() => buy('final')}>Buy Course ₹1,299<ArrowRight size={19} /></button></div><div className="lp-signup"><span>{user ? `Welcome back, ${user.name || 'learner'}.` : 'Your courses. Your progress. One dashboard.'}</span><AccountButton user={user} inApp={inApp} checking={checkingSession} onSignIn={signup} /><span className="lp-signup-note"><ShieldCheck size={16} />{user ? 'Your existing account and learning progress stay together.' : 'Secure Google sign-in. No payment needed to create an account.'}</span></div>{notice && <div className="lp-notice" role="status" data-testid="landing-notice">{notice}</div>}</div></section>
+      <section className="lp-section lp-final" id="signup"><div className="lp-wrap"><span className="lp-eyebrow">YOUR FUTURE SELF WILL THANK YOU.</span><h2 className="lp-heading">Scrolling se aage badho.<br /><span>Apni story badlo.</span></h2><p>Pehla step free hai. Bas shuru toh karo.</p><div className="lp-final-actions"><WebinarButton source="final" url={data?.webinar_url}>Free Webinar</WebinarButton><button className="lp-button lp-button-outline" data-testid="buy-course-final" disabled={busy} onClick={() => buy('final')}>Buy Course ₹1,299<ArrowRight size={19} /></button></div><div className="lp-signup"><span>{user ? `Welcome back, ${user.name || 'learner'}.` : 'Your courses. Your progress. One dashboard.'}</span><AccountButton user={user} inApp={inApp} checking={checkingSession} onSignIn={signup} onLogout={logout} /><span className="lp-signup-note"><ShieldCheck size={16} />{user ? 'Your existing account and learning progress stay together.' : 'Secure Google sign-in. No payment needed to create an account.'}</span></div>{notice && <div className="lp-notice" role="status" data-testid="landing-notice">{notice}</div>}</div></section>
     </main>
     <footer className="lp-footer"><div className="lp-wrap"><div className="lp-footer-main"><div><a href="/courses/data-analytics" className="lp-brand" data-testid="footer-brand"><span className="lp-brand-icon"><BarChart3 size={24} /></span><span>mera<span className="lp-orange">mentor</span></span></a><p>Skills that open doors.<br />A community that has your back.</p></div><div className="lp-footer-links"><span>LET’S TALK</span><a href={`mailto:${settings?.support_email || 'Nikhilparwani205@gmail.com'}`} data-testid="footer-support"><Mail size={18} />Contact support<ArrowUpRight size={16} /></a>{settings?.whatsapp_number && <a href={`https://wa.me/${settings.whatsapp_number.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" data-testid="footer-whatsapp"><MessageCircle size={18} />WhatsApp us<ArrowUpRight size={16} /></a>}<div className="lp-socials">{settings?.instagram_url && <a href={settings.instagram_url} data-testid="footer-instagram" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Instagram size={23} /></a>}{settings?.linkedin_url && <a href={settings.linkedin_url} data-testid="footer-linkedin" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><b>in</b></a>}</div></div></div><div className="lp-footer-bottom"><span>© {new Date().getFullYear()} Mera Mentor. All rights reserved.</span><div><button data-testid="footer-terms" onClick={() => setLegal('terms')}>Terms & conditions</button><button data-testid="footer-privacy" onClick={() => setLegal('privacy')}>Privacy policy</button></div><span>Made for your next chapter. ↗</span></div></div></footer>
     <div className={`lp-sticky-cta ${scrolled ? 'lp-sticky-visible' : ''}`} data-testid="sticky-cta-bar" aria-hidden={!scrolled} inert={!scrolled ? true : undefined}><div className="lp-wrap"><div className="lp-sticky-label"><strong>Your next chapter. Just ₹1,299.</strong><span>Lifetime access · Beginner friendly</span></div><WebinarButton source="sticky" url={data?.webinar_url} className="lp-button-outline">Free Webinar</WebinarButton><button className="lp-button" data-testid="buy-course-sticky" disabled={busy} onClick={() => buy('sticky')}>Buy Course ₹1,299<ArrowUpRight size={18} /></button></div></div>

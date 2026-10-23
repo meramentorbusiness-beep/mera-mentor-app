@@ -18,22 +18,38 @@ def http_origin(value: str) -> str:
         return ""
 
 
-def frontend_url() -> str:
-    return http_origin(os.environ.get("FRONTEND_URL", ""))
-
-
 def cors_origins() -> list[str]:
-    """Empty means same-origin only, never a credentialed wildcard."""
+    """Optional comma-separated CORS_ORIGINS.
+
+    Default (unset/empty) is same-origin only: the React app and API share one
+    domain, so no CORS header is needed. Never a credentialed wildcard; never raises.
+    """
     origins = []
-    values = [os.environ.get("FRONTEND_URL", "")]
-    values += os.environ.get("CORS_ORIGINS", "").split(",")
-    for value in values:
+    for value in os.environ.get("CORS_ORIGINS", "").split(","):
         origin = http_origin(value)
         if origin and origin not in origins:
             origins.append(origin)
         elif value.strip() and not origin:
-            logging.warning("Ignoring invalid FRONTEND_URL/CORS_ORIGINS entry; use an HTTP(S) origin without paths or wildcards")
+            logging.warning("Ignoring invalid CORS_ORIGINS entry; use an HTTP(S) origin without paths or wildcards")
     return origins
+
+
+def request_origin(request) -> str:
+    """Public origin of an incoming request, honoring X-Forwarded-Proto (Render proxy)."""
+    proto = request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
+    if proto not in {"http", "https"}:
+        proto = request.url.scheme
+    host = request.headers.get("host", "").strip() or request.url.netloc
+    return http_origin(f"{proto}://{host}")
+
+
+def public_origin() -> str:
+    """Optional site origin for places without a request (e.g. email links), taken from GOOGLE_REDIRECT_URI."""
+    try:
+        parsed = urlsplit(os.environ.get("GOOGLE_REDIRECT_URI", "").strip())
+        return http_origin(f"{parsed.scheme}://{parsed.netloc}") if parsed.netloc else ""
+    except ValueError:
+        return ""
 
 
 def preview_database_enabled() -> bool:

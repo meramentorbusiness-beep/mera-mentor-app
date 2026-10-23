@@ -26,7 +26,7 @@ from models.models import (
     PurchaseStatus, CommissionStatus, PayoutStatus
 )
 from services.course_categories import category_options, resolve_course_category
-from lib.settings import cors_origins, frontend_url
+from lib.settings import cors_origins, request_origin
 
 app = FastAPI(title="Mera Mentor API", version="2.0.0")
 
@@ -51,7 +51,6 @@ COMMISSION_LEVELS = {
 }
 MIN_WITHDRAWAL = 100
 ADMIN_EMAILS = [e.strip() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()]
-FRONTEND_URL = frontend_url()
 
 # Razorpay
 RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
@@ -557,7 +556,7 @@ async def get_continue_learning(user: dict = Depends(get_current_user), db: Asyn
 # ========== Referral Routes ==========
 
 @api_router.get("/referrals/stats")
-async def get_referral_stats(user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def get_referral_stats(request: Request, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Get referral statistics"""
     user_id = user["user_id"]
     
@@ -585,7 +584,7 @@ async def get_referral_stats(user: dict = Depends(get_current_user), db: AsyncSe
         "total_earned": total_earned,
         "this_month": this_month,
         "referral_code": user["referral_code"],
-        "referral_link": f"{FRONTEND_URL}/login?ref={user['referral_code']}",
+        "referral_link": f"{request_origin(request)}/login?ref={user['referral_code']}",
     }
 
 @api_router.get("/referrals/users")

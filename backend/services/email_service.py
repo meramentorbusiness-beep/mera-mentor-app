@@ -3,13 +3,14 @@ import os
 import resend
 from typing import Optional
 from datetime import datetime
-from lib.settings import frontend_url
+from lib.settings import public_origin
 
 # Configuration
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "noreply@meramentor.in")
 RESEND_SUPPORT_EMAIL = os.environ.get("RESEND_SUPPORT_EMAIL", "support@meramentor.in")
-FRONTEND_URL = frontend_url()
+# Absolute links in emails use the site's domain from GOOGLE_REDIRECT_URI (optional).
+SITE_URL = public_origin()
 
 # Initialize Resend
 if RESEND_API_KEY:
@@ -17,7 +18,7 @@ if RESEND_API_KEY:
 
 def is_email_enabled() -> bool:
     """Check if email service is configured"""
-    return bool(RESEND_API_KEY.strip() and RESEND_FROM_EMAIL.strip() and FRONTEND_URL)
+    return bool(RESEND_API_KEY.strip() and RESEND_FROM_EMAIL.strip() and SITE_URL)
 
 def _format_inr(amount: float) -> str:
     """Format amount in INR"""
@@ -63,7 +64,7 @@ def _base_template(content: str, title: str) -> str:
                                 © {datetime.now().year} Mera Mentor. All rights reserved.
                             </p>
                             <p style="margin: 10px 0 0; color: #475569; font-size: 10px;">
-                                <a href="{FRONTEND_URL}/unsubscribe" style="color: #64748b;">Unsubscribe</a>
+                                <a href="{SITE_URL}/unsubscribe" style="color: #64748b;">Unsubscribe</a>
                             </p>
                         </td>
                     </tr>
@@ -82,7 +83,7 @@ async def send_welcome_email(user_email: str, user_name: str, referral_code: str
     if not is_email_enabled():
         return None
     
-    referral_link = f"{FRONTEND_URL}/login?ref={referral_code}"
+    referral_link = f"{SITE_URL}/login?ref={referral_code}"
     
     content = f"""
     <h2 style="margin: 0 0 20px; color: #f1f5f9; font-size: 24px;">Mera Mentor pe Swagat hai! 🎉</h2>
@@ -118,7 +119,7 @@ async def send_welcome_email(user_email: str, user_name: str, referral_code: str
     </div>
     
     <div style="text-align: center; margin-top: 30px;">
-        <a href="{FRONTEND_URL}/courses" style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px;">
+        <a href="{SITE_URL}/courses" style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px;">
             Explore Courses →
         </a>
     </div>
@@ -173,7 +174,7 @@ async def send_purchase_confirmation(
     </div>
     
     <div style="text-align: center; margin-top: 30px;">
-        <a href="{FRONTEND_URL}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px;">
+        <a href="{SITE_URL}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px;">
             Start Learning →
         </a>
     </div>
@@ -232,7 +233,7 @@ async def send_commission_earned(
     </p>
     
     <div style="text-align: center; margin-top: 20px;">
-        <a href="{FRONTEND_URL}/wallet" style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px;">
+        <a href="{SITE_URL}/wallet" style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px;">
             View Wallet →
         </a>
     </div>
@@ -338,7 +339,7 @@ async def send_referral_nudge(
     {courses_html}
     
     <div style="text-align: center; margin-top: 30px;">
-        <a href="{FRONTEND_URL}/courses" style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px;">
+        <a href="{SITE_URL}/courses" style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px;">
             Browse Courses →
         </a>
     </div>

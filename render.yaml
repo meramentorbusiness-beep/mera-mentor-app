@@ -48,8 +48,6 @@ services:
         sync: false
       - key: CLOUDFLARE_R2_BUCKET_NAME
         sync: false
-      - key: FRONTEND_URL
-        sync: false
       - key: CORS_ORIGINS
         sync: false
       - key: WEBINAR_SIGNUP_URL

@@ -41,7 +41,9 @@ export function track(event, section = '', value = null) {
       referral_code: referralCode(), section, value }) }).catch(() => {});
 }
 export function webinarLink(url) {
-  const link = new URL(url || process.env.REACT_APP_WEBINAR_URL);
+  let link;
+  // Never crash the page when the webinar URL is not loaded/configured yet.
+  try { link = new URL(url || process.env.REACT_APP_WEBINAR_URL); } catch { return '#signup'; }
   if (referralCode()) link.searchParams.set('ref', referralCode());
   link.searchParams.set('utm_source', browserType === 'browser' ? 'mera_mentor' : browserType);
   link.searchParams.set('utm_campaign', 'data_analytics');

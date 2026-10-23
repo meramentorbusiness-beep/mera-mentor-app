@@ -6,7 +6,7 @@ import { ReviewCard } from './ReviewCard';
 
 export const WebinarButton = ({ source, url, children, className = '' }) => <a className={`lp-button ${className}`} data-testid={`webinar-${source}`} href={webinarLink(url)} onClick={() => track('webinar_click', source)}><GraduationCap size={21} />{children || 'Free Webinar Join Karo'}<ArrowUpRight size={19} /></a>;
 
-export const Hero = ({ webinarUrl }) => <>
+export const Hero = ({ webinarUrl, findCourses }) => <>
   <section className="lp-hero" aria-labelledby="hero-heading">
     <img className="lp-hero-art" src="/landing/hero.webp" width="1264" height="848" alt="Data analytics workspace with Excel, database and dashboard illustrations" fetchPriority="high" data-testid="hero-illustration" />
     <div className="lp-wrap lp-hero-inner">
@@ -14,7 +14,7 @@ export const Hero = ({ webinarUrl }) => <>
       <h1 id="hero-heading" data-testid="hero-headline"><span className="lp-hero-question">No Coding Background?</span>{' '}Become a <span className="lp-orange">Data Analyst</span><br /> in <span className="lp-orange">2 Months.</span></h1>
       <p className="lp-hero-promise">Excel se AI tak. Step by step, apni pace pe.</p>
       <p className="lp-hero-description">Fresher ho ya career switcher — Excel se AI tak,<br className="lp-desktop-break" /> practical skills seekho. Apne next chapter ke liye ready ho jao.</p>
-      <div className="lp-hero-ctas"><WebinarButton source="hero" url={webinarUrl} /><a className="lp-button lp-button-outline" data-testid="course-hero" href="#pricing" onClick={() => track('course_click', 'hero')}>Course Dekho — ₹1,299<ArrowRight size={19} /></a></div>
+      <div className="lp-hero-ctas"><WebinarButton source="hero" url={webinarUrl} />{findCourses}</div>
       <div className="lp-hero-proof" data-testid="hero-trust-badges"><span><GraduationCap size={19} />6 Learning Modules</span><span><ShieldCheck size={17} />Beginner Friendly</span><span><Infinity size={19} />Lifetime Access</span></div>
     </div>
     <div className="lp-hero-bottom"><div className="lp-wrap"><span>ZERO CODING BACKGROUND. <b>UNLIMITED POSSIBILITIES.</b></span><a href="#curriculum" data-testid="explore-curriculum">Explore the course <span>↓</span></a></div></div>
@@ -29,8 +29,8 @@ export const CourseStack = () => <section className="lp-section lp-stack" id="co
   <div className="lp-stack-grid">{stack.map((item, i) => <article className={`lp-skill-card lp-skill-${item.color}`} key={item.tag} data-testid={`skill-card-${i}`}><div className="lp-skill-top"><span className="lp-skill-icon" aria-hidden="true">{item.icon}</span><span>0{i + 1}</span></div><span className="lp-skill-tag">{item.tag}</span><h3>{item.title}</h3><p>{item.detail}</p><span className="lp-skill-bottom">REAL SKILLS. REAL APPLICATION.<ArrowUpRight size={17} /></span></article>)}</div>
 </div></section>;
 
-export const Curriculum = () => <section className="lp-section lp-curriculum" id="curriculum"><div className="lp-wrap lp-two-col">
-  <div><span className="lp-eyebrow">YOUR STEP-BY-STEP ROADMAP</span><h2 className="lp-heading">Zero se<br /><span>job-ready tak.</span></h2><p className="lp-section-description">Ek clear path. Practical projects.<br />Apni pace pe, apne future ke liye.</p><div className="lp-curriculum-facts" data-testid="curriculum-facts"><span><b>6</b> focused modules</span><span><b><Infinity size={35} aria-label="Lifetime" /></b> lifetime revision</span></div><p className="lp-disclaimer">Self-paced learning; course access has no expiry.</p><WebinarButton source="curriculum" className="lp-button-outline" >Pehle Free Webinar Dekho</WebinarButton></div>
+export const Curriculum = ({ webinarUrl }) => <section className="lp-section lp-curriculum" id="curriculum"><div className="lp-wrap lp-two-col">
+  <div><span className="lp-eyebrow">YOUR STEP-BY-STEP ROADMAP</span><h2 className="lp-heading">Zero se<br /><span>job-ready tak.</span></h2><p className="lp-section-description">Ek clear path. Practical projects.<br />Apni pace pe, apne future ke liye.</p><div className="lp-curriculum-facts" data-testid="curriculum-facts"><span><b>6</b> focused modules</span><span><b><Infinity size={35} aria-label="Lifetime" /></b> lifetime revision</span></div><p className="lp-disclaimer">Self-paced learning; course access has no expiry.</p><WebinarButton source="curriculum" url={webinarUrl} className="lp-button-outline" >Pehle Free Webinar Dekho</WebinarButton></div>
   <div className="lp-accordion">{curriculum.map((module, i) => <details key={module.title} data-testid={`curriculum-module-${i}`}><summary data-testid={`curriculum-toggle-${i}`}><span className="lp-module-number">0{i + 1}</span><span className="lp-module-title">{module.title}{!module.unlocked && <small>Included with course access</small>}</span>{!module.unlocked && <LockKeyhole size={16} aria-label="Included with purchase" />}<span className="lp-expand">+</span></summary><div className="lp-accordion-content" data-testid={`curriculum-content-${i}`}>{module.topics.map(topic => <p key={topic}><Check size={15} />{topic}</p>)}</div></details>)}</div>
 </div></section>;
 

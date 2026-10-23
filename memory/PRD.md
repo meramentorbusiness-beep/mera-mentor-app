@@ -52,7 +52,7 @@ Build a Multi-Level Referral & Commission Dashboard for an online course platfor
 - `GOOGLE_CLIENT_SECRET`
 - `GOOGLE_REDIRECT_URI` = `https://<render-app>.onrender.com/api/auth/google/callback`
 - `SESSION_SECRET` (random string, generate via `python -c "import secrets; print(secrets.token_urlsafe(64))"`)
-- `FRONTEND_URL` = `https://<render-app>.onrender.com` (already wired in render.yaml)
+- `FRONTEND_URL` no longer used (removed 2026-10-23); optional `CORS_ORIGINS`, `GOOGLE_REDIRECT_URI`
 
 ### Env vars user must set on Render for R2 uploads:
 - `CLOUDFLARE_R2_ACCOUNT_ID`
@@ -131,7 +131,7 @@ COMMISSION_L5=1
 
 # Other
 STORAGE_MODE=mock
-FRONTEND_URL=https://meramentor.in
+# FRONTEND_URL removed — app is same-domain; redirects are relative
 ADMIN_EMAILS=admin@meramentor.in
 ```
 

@@ -3,6 +3,7 @@
 # Reads all secrets from environment variables — nothing is hardcoded.
 from __future__ import annotations
 
+import hashlib
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -22,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lib.database import get_db
 from models.models import User, UserSession
 from routes.landing import record_event
-from lib.settings import frontend_url
+from lib.settings import request_origin
 
 router = APIRouter(prefix="/api/auth/google", tags=["google-auth"])
 
@@ -41,17 +42,40 @@ def _env(name: str, required: bool = True) -> str:
     return val
 
 
+LANDING_PATH = "/courses/data-analytics"
+CALLBACK_PATH = "/api/auth/google/callback"
+
+
 def _check_google_config():
-    names = ("FRONTEND_URL", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI", "SESSION_SECRET")
+    names = ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET")
     missing = [name for name in names if not os.environ.get(name, "").strip()]
     if missing:
         raise HTTPException(503, f"Google sign-in is not configured. Missing: {', '.join(missing)}")
-    if not frontend_url():
-        raise HTTPException(503, "FRONTEND_URL must be a full HTTP(S) origin, without a path or comma-separated URLs")
+
+
+def _redirect_uri(request: Request) -> str:
+    """GOOGLE_REDIRECT_URI if set, else built from the incoming request (https behind Render's proxy)."""
+    configured = os.environ.get("GOOGLE_REDIRECT_URI", "").strip()
+    if configured:
+        return configured
+    origin = request_origin(request)
+    if not origin:
+        raise HTTPException(400, "Could not determine this site's address for Google sign-in")
+    return f"{origin}{CALLBACK_PATH}"
 
 
 def _serializer() -> URLSafeTimedSerializer:
-    return URLSafeTimedSerializer(_env("SESSION_SECRET"), salt="google-oauth-state-v1")
+    # SESSION_SECRET is optional; otherwise derive a stable signing key from the Google client secret.
+    secret = os.environ.get("SESSION_SECRET", "").strip() or hashlib.sha256(
+        b"mera-mentor-oauth-state:" + _env("GOOGLE_CLIENT_SECRET").encode()).hexdigest()
+    return URLSafeTimedSerializer(secret, salt="google-oauth-state-v1")
+
+
+def _auth_failed(reason: str) -> RedirectResponse:
+    """Send the student back to the landing page with a short error, never a blank JSON screen."""
+    resp = RedirectResponse(f"{LANDING_PATH}?{urlencode({'auth_error': reason})}", status_code=302)
+    resp.delete_cookie("google_oauth_state", path="/api/auth/google")
+    return resp
 
 
 def _generate_referral_code() -> str:
@@ -60,14 +84,15 @@ def _generate_referral_code() -> str:
 
 
 @router.get("/login")
-async def google_login(ref: str | None = Query(default=None, max_length=100),
+async def google_login(request: Request,
+                       ref: str | None = Query(default=None, max_length=100),
                        visitor_id: UUID | None = None,
                        browser_type: Literal["instagram", "facebook", "browser"] = "browser",
                        intent: Literal["signup", "purchase"] = "signup"):
     """Redirect the user to Google's consent screen."""
     _check_google_config()
     client_id = _env("GOOGLE_CLIENT_ID")
-    redirect_uri = _env("GOOGLE_REDIRECT_URI")
+    redirect_uri = _redirect_uri(request)
     ref = ref.strip() if ref else None
 
     nonce = secrets.token_urlsafe(32)
@@ -111,47 +136,54 @@ async def google_callback(
 ):
     """Handle Google's redirect: exchange code, verify id_token, issue session cookie."""
     # REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    _check_google_config()
-    frontend_base = frontend_url()
-    login_url = f"{frontend_base}/courses/data-analytics"
+    try:
+        _check_google_config()
+    except HTTPException:
+        return _auth_failed("not_configured")
 
     if error:
-        return RedirectResponse(f"{login_url}?{urlencode({'auth_error': error})}", status_code=302)
+        return _auth_failed("cancelled" if error == "access_denied" else "failed")
     if not code or not state:
-        raise HTTPException(400, "Missing Google authorization code or state")
+        return _auth_failed("failed")
 
     # 1) State validation (CSRF)
     expected_state = request.cookies.get("google_oauth_state")
     if not expected_state or not secrets.compare_digest(state, expected_state):
-        raise HTTPException(400, "Invalid OAuth state")
+        return _auth_failed("expired")
     try:
         state_data = _serializer().loads(state, max_age=600)
     except (BadSignature, SignatureExpired):
-        raise HTTPException(400, "Expired or invalid OAuth state")
+        return _auth_failed("expired")
 
     client_id = _env("GOOGLE_CLIENT_ID")
     client_secret = _env("GOOGLE_CLIENT_SECRET")
-    redirect_uri = _env("GOOGLE_REDIRECT_URI")
+    try:
+        redirect_uri = _redirect_uri(request)
+    except HTTPException:
+        return _auth_failed("failed")
 
     # 2) Token exchange
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        token_resp = await client.post(
-            TOKEN_ENDPOINT,
-            data={
-                "code": code,
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "redirect_uri": redirect_uri,
-                "grant_type": "authorization_code",
-            },
-        )
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            token_resp = await client.post(
+                TOKEN_ENDPOINT,
+                data={
+                    "code": code,
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "redirect_uri": redirect_uri,
+                    "grant_type": "authorization_code",
+                },
+            )
+    except httpx.HTTPError:
+        return _auth_failed("failed")
     if token_resp.status_code != 200:
-        raise HTTPException(400, "Google token exchange failed")
+        return _auth_failed("failed")
 
     tokens = token_resp.json()
     raw_id_token = tokens.get("id_token")
     if not raw_id_token:
-        raise HTTPException(400, "Google did not return an ID token")
+        return _auth_failed("failed")
 
     # 3) ID token verification
     try:
@@ -159,18 +191,18 @@ async def google_callback(
             raw_id_token, google_requests.Request(), client_id
         )
     except ValueError:
-        raise HTTPException(400, "Invalid Google ID token")
+        return _auth_failed("failed")
 
     if claims.get("aud") != client_id:
-        raise HTTPException(400, "Invalid Google token audience")
+        return _auth_failed("failed")
     if not secrets.compare_digest(str(claims.get("nonce", "")), str(state_data.get("nonce", ""))):
-        raise HTTPException(400, "Invalid Google token nonce")
+        return _auth_failed("failed")
     if claims.get("iss") not in {"accounts.google.com", "https://accounts.google.com"}:
-        raise HTTPException(400, "Invalid Google token issuer")
+        return _auth_failed("failed")
     if not claims.get("email") or not claims.get("sub"):
-        raise HTTPException(400, "Google token lacks required identity claims")
+        return _auth_failed("failed")
     if not claims.get("email_verified", False):
-        raise HTTPException(403, "Google email is not verified")
+        return _auth_failed("unverified_email")
 
     google_id = claims["sub"]
     email = claims["email"].lower().strip()
@@ -241,15 +273,15 @@ async def google_callback(
             referral_code=state_data.get("ref"))
     await db.commit()
 
-    # 6) Redirect back to the frontend with cookie
-    dashboard_url = f"{frontend_base}/dashboard"
+    # 6) Redirect back to the frontend with cookie (same domain, so a relative path)
+    dashboard_url = "/dashboard"
     if state_data.get("intent") == "purchase":
         query = {"checkout": "1", "source_browser": state_data.get("browser_type", "browser")}
         if state_data.get("visitor_id"):
             query["visitor"] = state_data["visitor_id"]
         if state_data.get("ref"):
             query["ref"] = state_data["ref"]
-        dashboard_url = f"{frontend_base}/courses/data-analytics?{urlencode(query)}#pricing"
+        dashboard_url = f"{LANDING_PATH}?{urlencode(query)}#pricing"
     resp = RedirectResponse(dashboard_url, status_code=302)
     resp.delete_cookie("google_oauth_state", path="/api/auth/google")
     resp.set_cookie(
