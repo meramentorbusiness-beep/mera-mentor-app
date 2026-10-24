@@ -55,13 +55,14 @@ export default function DataAnalyticsLandingPage() {
   }, []);
 
   const openBrowser = () => { track('browser_open', 'signup'); setBrowserOpen(true); };
+  // Single entry point: logged-in students land on the dashboard, everyone else on /login.
   const signup = () => {
     if (checkingSession) return;
     if (user) { window.location.assign('/dashboard'); return; }
     if (inApp) return openBrowser();
-    if (data && !data.google_ready) return setAuthNotice('Google sign-in is temporarily unavailable. Please try again shortly.');
     track('course_click', 'find-courses');
-    googleLogin('signup');
+    const ref = referralCode();
+    window.location.assign(ref ? `/login?ref=${encodeURIComponent(ref)}` : '/login');
   };
   const logout = async () => {
     try { await api('/auth/logout', { method: 'POST', body: '{}' }); } catch { /* session is cleared locally either way */ }

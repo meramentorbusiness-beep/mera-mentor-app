@@ -330,3 +330,57 @@ Remove the separate folder/category management section. Inside the existing Crea
 - **P1 content**: authentic testimonials/outcomes and dated market statistics; mentor-experience/source verification from earlier notes remains.
 - **Unchanged earlier blockers**: actual landing course remains draft until real content/linking; paymentsTESTmode, webhook secret absent, R2/email credentials absent. Production requires externalPostgreSQL configuration per earlier deploymentRCA; do NOT retry publishing without userrequest.
 - **Optional trust improvement**: add a consenting learner’s real project snapshot alongside their reported outcome, when authentic evidence is available.
+
+---
+
+## 2026-06 (fork) — Public landing entry point + single CTA
+
+### Problem
+Opening the Render root URL went straight to `/login`; the Data Analytics landing page was not
+reachable as the public entry point.
+
+### Routing audit (before changes)
+- `/` was wrapped in `ProtectedRoute` (`frontend/src/App.js:41`), whose effect pushed logged-out
+  users to `/login` (`App.js:31`). This was the ONLY redirect-to-/login in the whole app — no
+  backend redirect, no second guard.
+- `/courses/data-analytics` is not a React Router route: `frontend/src/index.js:7-11` branches on
+  `window.location.pathname` and renders the landing bundle directly (keeps dashboard/charts out of
+  the public bundle).
+- SPA fallback already present: `backend/server.py:2069-2075` serves `index.html` for all non-API
+  paths; `Dockerfile` stage 2 copies the React build into `/app/static`. No change needed.
+- OAuth callback already redirects to `/dashboard` (`backend/routes/google_auth.py:277,285`).
+- Landing copy on main was already current: new headline, "Find Courses", no "Hum Fluff Cut Kar
+  Rahe Hain" line. The live Render site was simply an older build.
+
+### Implemented
+- `frontend/src/App.js`: added public `RootEntry` route for `/` — logged-in users `Navigate` to
+  `/dashboard`, logged-out users `window.location.replace('/courses/data-analytics')`. The protected
+  `Layout` branch keeps all its children (`dashboard`, `referrals`, `wallet`, `courses`, `upsell`,
+  `admin/courses`); only the old `index` redirect was removed.
+- `frontend/src/landing/DataAnalyticsLandingPage.js`: "Find Courses" now routes logged-out students
+  to `/login` (carrying `?ref=` when a referral code exists) instead of starting Google OAuth
+  inline. Logged-in students still go to `/dashboard`. In-app (Instagram/Facebook) browsers still
+  get the "open in browser" dialog. Google OAuth config, login route and redirect URI untouched.
+
+### Route table
+| Route | Access |
+|---|---|
+| `/` | public → landing (logged out) / `/dashboard` (logged in) |
+| `/courses/data-analytics` | public (direct load + refresh) |
+| `/login` | public; redirects to `/dashboard` if already signed in |
+| `/ref/:code` | public |
+| `/dashboard`, `/referrals`, `/wallet`, `/courses`, `/courses/:id`, `/upsell/:id`, `/admin/courses` | protected → `/login` |
+
+### Verification (preview, screenshot tool)
+- `/` logged out → landing renders with "Find Courses" hero CTA. PASS
+- "Find Courses" logged out → `/login` ("Welcome back" / "Continue with Google"). PASS
+- `/dashboard` logged out → `/login`. PASS
+- `/courses/data-analytics` direct load → headline + hero render. PASS
+- Logged in: landing navbar shows account name + logout (no Sign in button); `/` → `/dashboard`;
+  `/login` → `/dashboard`. PASS
+- "Free Webinar Join Karo" unchanged; ₹1,299 still shown in pricing card, final CTA and sticky bar.
+
+### Notes / remaining
+- Workspace has NO git remote configured (`git remote -v` empty, `git fetch` denied), so the agent
+  cannot pull or push. User must use the "Save to GitHub" button, then redeploy on Render.
+- Real Google consent flow still only verifiable by the owner on the live domain.

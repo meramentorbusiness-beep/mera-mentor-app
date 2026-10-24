@@ -33,13 +33,23 @@ function ProtectedRoute({ children }) {
   return user ? children : null;
 }
 
+const LANDING_PATH = "/courses/data-analytics";
+
+// "/" is public: logged-in students go to the dashboard, everyone else to the landing page.
+function RootEntry() {
+  const { user, loading } = useAuth();
+  useEffect(() => { if (!loading && !user) window.location.replace(LANDING_PATH); }, [user, loading]);
+  if (!loading && user) return <Navigate to="/dashboard" replace />;
+  return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="loader"></div></div>;
+}
+
 function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/ref/:code" element={<ReferralLanding />} />
+      <Route path="/" element={<RootEntry />} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="referrals" element={<ReferredUsers />} />
         <Route path="wallet" element={<Wallet />} />
